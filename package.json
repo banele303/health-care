@@ -1,0 +1,9 @@
+{
+  "name": "medflow-ai",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "convex": "^1.43.0",
+    "@convex-dev/auth": "^0.0.94"
+  }
+}

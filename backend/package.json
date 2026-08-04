@@ -1,0 +1,42 @@
+{
+  "name": "backend",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "watch": "bun --watch index.ts",
+    "start:ngrok": "ngrok http 5000",
+    "start:inngest": "npx inngest-cli@latest dev",
+    "start:server": "nodemon --exec bun run src/server.ts",
+    "dev": "concurrently -c \"blue,magenta,cyan\" -n \"SERVER,NGROK,INNGEST\" \"bun run start:server\" \"bun run start:ngrok\" \"npm run start:inngest\""
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "concurrently": "^9.2.1",
+    "nodemon": "^3.1.14"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@better-auth/mongo-adapter": "^1.5.3",
+    "@google/generative-ai": "^0.24.1",
+    "@polar-sh/better-auth": "^1.8.3",
+    "@polar-sh/sdk": "^0.46.4",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/morgan": "^1.9.10",
+    "better-auth": "^1.5.5",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "helmet": "^8.1.0",
+    "inngest": "^3.52.6",
+    "mongodb": "^7.1.0",
+    "mongoose": "^9.2.4",
+    "morgan": "^1.10.1",
+    "socket.io": "^4.8.3",
+    "uploadthing": "^7.7.4"
+  }
+}
