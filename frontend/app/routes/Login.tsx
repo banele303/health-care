@@ -1,9 +1,11 @@
 import type { Route } from "../+types/root";
-import { Activity, Lock, Mail, ChevronRight, AlertCircle } from "lucide-react";
+import { Activity, Lock, Mail, ChevronRight, AlertCircle, User } from "lucide-react";
 import { CustomInput } from "@/components/global/CustomInput";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { useForm } from "react-hook-form";
 import { useState } from "react";
 import z from "zod";
@@ -13,6 +15,8 @@ import { useAuthActions, useConvexAuth } from "@convex-dev/auth/react";
 import { useNavigate, Navigate } from "react-router"; // Import this to redirect
 import { loginSchema } from "@/components/auth/login.schema";
 import Loader from "@/components/global/Loader";
+import { useQuery, convex } from "@/lib/convex";
+import { api } from "@convex/_generated/api";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -26,9 +30,14 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 const Login = () => {
   const [globalError, setGlobalError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [adminName, setAdminName] = useState("");
   const navigate = useNavigate(); // Hook for redirection
   const { isAuthenticated, isLoading: isAuthLoading } = useConvexAuth();
   const { signIn } = useAuthActions();
+
+  // First-run detection: zero users => show "Create Admin" instead of sign-in.
+  const { data: userCount } = useQuery(api.users.count, {});
+  const isFirstRun = userCount === 0;
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -52,13 +61,26 @@ const Login = () => {
     setGlobalError("");
     setIsLoading(true);
     try {
-      // signIn throws on failure in modern @convex-dev/auth
-      await signIn("password", {
-        email: data.email,
-        password: data.password,
-        flow: "signIn",
-      });
-      toast.success("Login Successful!");
+      if (isFirstRun) {
+        // First run: create the administrator account.
+        await signIn("password", {
+          email: data.email,
+          password: data.password,
+          flow: "signUp",
+        });
+        await convex.mutation(api.users.bootstrapSelfAdmin, {
+          name: adminName || "Admin",
+        });
+        toast.success("Admin account created. Welcome to MedFlow!");
+      } else {
+        // signIn throws on failure in modern @convex-dev/auth
+        await signIn("password", {
+          email: data.email,
+          password: data.password,
+          flow: "signIn",
+        });
+        toast.success("Login Successful!");
+      }
       navigate("/dashboard"); // 👈 Redirect user after login
     } catch (error: any) {
       setGlobalError(error?.message || "Invalid email or password");
@@ -77,10 +99,12 @@ const Login = () => {
               <Activity className="text-white w-8 h-8" />
             </div>
             <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-              MedFlow AI
+              {isFirstRun ? "Create Admin Account" : "MedFlow AI"}
             </h1>
             <p className="text-slate-500 dark:text-slate-400 font-medium text-sm mt-1">
-              Secure Provider Portal
+              {isFirstRun
+                ? "First run — set up the administrator account"
+                : "Secure Provider Portal"}
             </p>
           </div>
           {/* global error */}
@@ -92,6 +116,29 @@ const Login = () => {
           )}
           {/* form */}
           <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
+            {isFirstRun && (
+              <Field className="space-y-1.5">
+                <FieldLabel
+                  htmlFor="adminName"
+                  className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1"
+                >
+                  Full Name
+                </FieldLabel>
+                <div className="relative group">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors pointer-events-none z-10">
+                    <User size={18} />
+                  </div>
+                  <Input
+                    id="adminName"
+                    type="text"
+                    placeholder="Dr. Jane Smith"
+                    value={adminName}
+                    onChange={(e) => setAdminName(e.target.value)}
+                    className="w-full rounded-2xl py-6 pl-12 pr-4 text-sm transition-all outline-none shadow-sm"
+                  />
+                </div>
+              </Field>
+            )}
             {/* input(custom) */}
             <CustomInput
               control={form.control}
@@ -140,11 +187,11 @@ const Login = () => {
               {isLoading ? (
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>Verifying...</span>
+                  <span>{isFirstRun ? "Creating..." : "Verifying..."}</span>
                 </div>
               ) : (
                 <div className="flex items-center justify-center gap-2">
-                  Sign Into Portal
+                  {isFirstRun ? "Create Admin & Enter" : "Sign Into Portal"}
                   <ChevronRight
                     size={18}
                     className="group-hover:translate-x-1 transition-transform"

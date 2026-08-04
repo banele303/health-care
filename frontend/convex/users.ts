@@ -61,6 +61,37 @@ export const getById = query({
 // ─────────────────────────────────────────────────────────────
 // Admin: create / update / ban / remove
 // ─────────────────────────────────────────────────────────────
+/** Total number of users — public so the login page can detect a fresh deployment. */
+export const count = query({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("users").collect();
+    return all.length;
+  },
+});
+
+/**
+ * First-run only: promotes the currently signed-in user to admin.
+ * Guarded to exactly ONE user existing — after the first admin is created
+ * this can never be called again (no public signup afterwards).
+ */
+export const bootstrapSelfAdmin = mutation({
+  args: { name: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new ConvexError("Not signed in");
+    const total = (await ctx.db.query("users").collect()).length;
+    if (total !== 1) {
+      throw new ConvexError("First-admin setup is no longer available");
+    }
+    await ctx.db.patch(identity.subject as any, {
+      role: "admin",
+      ...(args.name ? { name: args.name } : {}),
+    });
+    return { ok: true };
+  },
+});
+
 /**
  * Admin-only user creation.
  * Uses Convex Auth's sign-up REST endpoint so the password is hashed
