@@ -75,3 +75,19 @@ export const navConfig: {
   navAdmin: [],
   navSecondary: [],
 };
+
+// Helper function to find a route configuration by URL
+export function getRouteConfig(path: string, items: NavItem[]): NavItem | null {
+  for (const item of items) {
+    if (item.url === path) return item;
+    if (item.items) {
+      const found = item.items.find((sub) => sub.url === path);
+      if (found)
+        return {
+          ...found,
+          allowedRoles: found.allowedRoles || item.allowedRoles,
+        } as NavItem;
+    }
+  }
+  return null;
+}
