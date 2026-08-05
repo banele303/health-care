@@ -1,5 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+// NOTE: schema/index changes deploy with `convex dev` — watch for "[+] <table>.<index>" lines.
 
 export default defineSchema({
   // ── Convex Auth tables (extended users table with hospital fields) ──

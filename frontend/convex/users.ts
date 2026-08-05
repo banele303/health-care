@@ -36,7 +36,7 @@ export const list = query({
     const q = ctx.db.query("users");
     const filtered =
       role && role !== "all" && role !== ""
-        ? q.withIndex("by_role", (qq) => qq.eq("role", role as any))
+        ? q.filter((qq) => qq.eq(qq.field("role"), role))
         : q;
     const total = (await filtered.collect()).length;
     const all = await filtered.order("desc").take(page * limit);
