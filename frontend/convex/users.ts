@@ -1,7 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import { query, mutation, action, internalQuery, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { paginate, requireRole, requireUser, type Role } from "./lib";
+import { paginate, requireRole, requireUser, userIdFromSubject, type Role } from "./lib";
 
 const ROLES: Role[] = ["admin", "doctor", "nurse", "pharmacist", "lab_tech", "patient"];
 
@@ -13,7 +13,7 @@ export const me = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
-    const user: any = await ctx.db.get(identity.subject as any);
+    const user: any = await ctx.db.get(userIdFromSubject(identity) as any);
     return user ?? null;
   },
 });
@@ -84,7 +84,7 @@ export const bootstrapSelfAdmin = mutation({
     if (total !== 1) {
       throw new ConvexError("First-admin setup is no longer available");
     }
-    await ctx.db.patch(identity.subject as any, {
+    await ctx.db.patch(userIdFromSubject(identity) as any, {
       role: "admin",
       ...(args.name ? { name: args.name } : {}),
     });
@@ -123,7 +123,7 @@ export const create = action({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new ConvexError("Unauthorized");
     const admin: any = await ctx.runQuery(internal.users.getUserDoc, {
-      userId: identity.subject,
+      userId: userIdFromSubject(identity),
     });
     if (!admin || admin.role !== "admin") {
       throw new ConvexError("Forbidden: Admins only");

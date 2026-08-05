@@ -1,6 +1,14 @@
 import { ConvexError, v } from "convex/values";
 import type { QueryCtx, MutationCtx } from "./_generated/server";
 
+/**
+ * @convex-dev/auth JWTs encode the subject as "<userId>|<sessionId>".
+ * Strip the session id to get the users-table doc id.
+ */
+export function userIdFromSubject(identity: { subject: string }): string {
+  return identity.subject.split("|")[0];
+}
+
 export type Role =
   | "admin"
   | "doctor"
@@ -17,7 +25,7 @@ export type Role =
 export async function requireUser(ctx: QueryCtx | MutationCtx) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) throw new ConvexError("Unauthorized");
-  const user: any = await ctx.db.get(identity.subject as any);
+  const user: any = await ctx.db.get(userIdFromSubject(identity) as any);
   if (!user) throw new ConvexError("Unauthorized");
   return { identity, user };
 }
