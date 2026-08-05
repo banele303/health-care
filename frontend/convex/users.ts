@@ -93,6 +93,30 @@ export const bootstrapSelfAdmin = mutation({
 });
 
 /**
+ * One-time repair: promotes the single role-less user to admin.
+ * Same guard as bootstrapSelfAdmin (exactly one user) but needs no identity,
+ * so it can be run from the CLI: npx convex run users:bootstrapRepair
+ */
+export const bootstrapRepair = mutation({
+  args: { name: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const all = await ctx.db.query("users").collect();
+    if (all.length !== 1) {
+      throw new ConvexError("Repair requires exactly one user");
+    }
+    const only = all[0] as any;
+    if (only.role) {
+      throw new ConvexError("User already has a role — nothing to repair");
+    }
+    await ctx.db.patch(only._id, {
+      role: "admin",
+      ...(args.name ? { name: args.name } : {}),
+    });
+    return { ok: true, user: (await ctx.db.get(only._id)) as any };
+  },
+});
+
+/**
  * Admin-only user creation.
  * Uses Convex Auth's sign-up REST endpoint so the password is hashed
  * with the provider's own algorithm, then patches role + custom fields.

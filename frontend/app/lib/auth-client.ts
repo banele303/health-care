@@ -22,6 +22,7 @@ export const authClient = {
       ? {
           ...me,
           id: me._id,
+          name: me.name ?? "User",
           emailVerified: !!me.emailVerificationTime,
           createdAt: me._creationTime,
           updatedAt: me._creationTime,
@@ -37,6 +38,7 @@ export const authClient = {
         ? {
             ...me,
             id: me._id,
+            name: me.name ?? "User",
             emailVerified: !!me.emailVerificationTime,
             createdAt: me._creationTime,
             updatedAt: me._creationTime,
