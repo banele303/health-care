@@ -28,7 +28,7 @@ export const list = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    await requireRole(ctx, ["admin", "doctor", "nurse"]);
+    await requireUser(ctx);
     const page = Math.max(1, args.page ?? 1);
     const limit = Math.max(1, args.limit ?? 10);
     const role = args.role;

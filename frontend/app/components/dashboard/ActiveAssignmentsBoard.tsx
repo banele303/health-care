@@ -16,14 +16,17 @@ import type { User } from "@/types";
 
 export default function ActiveAssignmentsBoard() {
   // 1. Get current logged-in user
-  const { data: session } = authClient.useSession();
+  const { data: session, isPending: isAuthLoading } = authClient.useSession();
   const currentUser = session?.user;
 
   // 2. Fetch all patients (realtime via Convex)
-  const { data, isLoading, isError } = useQuery(api.users.list, {
-    role: "patient",
-    limit: 50,
-  });
+  const { data, isLoading, isError } = useQuery(
+    api.users.list,
+    !currentUser ? "skip" : {
+      role: "patient",
+      limit: 50,
+    },
+  );
 
   // Filter only admitted patients who have been assigned a doctor
   const activeAssignments = ((data?.res || []) as User[]).filter(
@@ -31,7 +34,7 @@ export default function ActiveAssignmentsBoard() {
       patient.status === "admitted" && patient.assignedDoctorId,
   );
 
-  if (isLoading) {
+  if (isAuthLoading || (isLoading && currentUser)) {
     return (
       <div className="flex justify-center items-center h-64 border rounded-xl bg-slate-50/50 dark:bg-slate-900/20">
         <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />

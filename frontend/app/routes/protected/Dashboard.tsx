@@ -26,7 +26,7 @@ export default function HMSDashboard() {
   // Fetch users for StatsCards calculation
   const { data: userData, isLoading: isDataLoading } = useQuery(
     api.users.list,
-    { role: "patient", limit: 100 },
+    !user ? "skip" : { role: "patient", limit: 100 },
   );
 
   if (isAuthLoading || isDataLoading)
