@@ -269,4 +269,70 @@ export default defineSchema({
     status: v.union(v.literal("running"), v.literal("done"), v.literal("error")),
     createdAt: v.number(),
   }).index("by_agent", ["agentId"]),
+
+  // ── Jarvis AI Tables ─────────────────────────────────────────────
+  jarvisMessages: defineTable({
+    userId: v.string(),
+    itemId: v.optional(v.string()),
+    role: v.union(v.literal("user"), v.literal("assistant")),
+    text: v.string(),
+    final: v.optional(v.boolean()),
+    interrupted: v.optional(v.boolean()),
+  }).index("by_user", ["userId"]),
+
+  jarvisMemory: defineTable({
+    userId: v.string(),
+    key: v.string(),
+    value: v.string(),
+    category: v.string(), // preference | project | fact | context | service
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_key", ["userId", "key"]),
+
+  jarvisTimeline: defineTable({
+    userId: v.string(),
+    kind: v.string(),
+    label: v.string(),
+    detail: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"]),
+
+  jarvisVoiceState: defineTable({
+    userId: v.string(),
+    orbState: v.string(),
+    sessionActive: v.boolean(),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
+
+  jarvisTodos: defineTable({
+    userId: v.string(),
+    title: v.string(),
+    done: v.boolean(),
+    priority: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
+    dueAt: v.optional(v.number()),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"]),
+
+  jarvisObjective: defineTable({
+    userId: v.string(),
+    text: v.string(),
+    state: v.string(), // idle | working | waiting_auth | done
+  }).index("by_user", ["userId"]),
+
+  jarvisDashboardCards: defineTable({
+    userId: v.string(),
+    cardKey: v.string(), // emails | calendar | notes
+    data: v.any(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_key", ["userId", "cardKey"]),
+
+  jarvisProfiles: defineTable({
+    userId: v.string(),
+    displayName: v.optional(v.string()),
+    avatarUrl: v.optional(v.string()),
+    timezone: v.optional(v.string()),
+    customInstructions: v.optional(v.string()),
+  }).index("by_user", ["userId"]),
 });

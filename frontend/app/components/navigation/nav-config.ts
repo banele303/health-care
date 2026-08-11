@@ -99,6 +99,7 @@ export const navConfig: {
       allowedRoles: ["admin", "doctor", "nurse"],
       items: [
         { title: "All Agents", url: "/ai-hub" },
+        { title: "🤖 Jarvis AI", url: "/jarvis" },
       ],
     },
   ],

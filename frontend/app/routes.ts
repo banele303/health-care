@@ -21,5 +21,6 @@ export default [
     route("crm", "routes/protected/Crm.tsx"),
     route("messaging", "routes/protected/Messaging.tsx"),
     route("ai-hub", "routes/protected/AiHub.tsx"),
+    route("jarvis", "routes/protected/Jarvis.tsx"),
   ]),
 ] satisfies RouteConfig;
