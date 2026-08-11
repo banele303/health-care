@@ -1,7 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import { query, mutation, action, internalQuery, internalMutation } from "./_generated/server";
 import { api, internal } from "./_generated/api";
-import { signIn } from "./auth";
+import { createAccount } from "@convex-dev/auth/server";
 import { paginate, requireRole, requireUser, userIdFromSubject, type Role } from "./lib";
 
 const ROLES: Role[] = ["admin", "doctor", "nurse", "pharmacist", "lab_tech", "patient"];
@@ -165,27 +165,18 @@ export const create = action({
       );
     }
 
-    let createdResult: any;
+    let created: any;
     try {
-      createdResult = await ctx.runAction(signIn as any, {
+      created = await createAccount(ctx, {
         provider: "password",
-        params: {
-          email: args.email,
-          password: args.password,
-          name: args.name,
-          flow: "signUp",
-        },
+        account: { id: args.email, secret: args.password },
+        profile: { name: args.name, email: args.email },
       });
     } catch (e: any) {
-      throw new ConvexError(
-        e.message || "Failed to create user account",
-      );
+      throw new ConvexError(e.message || "Failed to create user account");
     }
 
-    const userId: string | undefined =
-      createdResult?.user?._id ??
-      createdResult?.user?.id ??
-      createdResult?.tokens?.userId;
+    const userId = created.user._id;
 
     // Patch role + custom fields
     const fields: any = {
@@ -200,40 +191,11 @@ export const create = action({
     if (args.medicalHistory) fields.medicalHistory = args.medicalHistory;
     if (args.age) fields.age = args.age;
 
-    if (userId) {
-      await ctx.runMutation((internal.users as any).setFields, { userId, fields });
-      return {
-        user: {
-          id: userId,
-          name: args.name,
-          email: args.email,
-          role: args.role,
-        },
-      };
-    } else {
-      // Fallback: locate by email
-      const found: any = await ctx.runQuery((internal.users as any).getByEmail, {
-        email: args.email,
-      });
-      if (found) {
-        await ctx.runMutation((internal.users as any).setFields, {
-          userId: found._id,
-          fields,
-        });
-        return {
-          user: {
-            id: found._id,
-            name: args.name,
-            email: args.email,
-            role: args.role,
-          },
-        };
-      }
-    }
+    await ctx.runMutation((internal.users as any).setFields, { userId, fields });
 
     return {
       user: {
-        id: "",
+        id: userId,
         name: args.name,
         email: args.email,
         role: args.role,
