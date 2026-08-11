@@ -33,10 +33,10 @@ export const navConfig: {
       title: "Dashboard",
       url: "/dashboard",
       icon: LayoutDashboard,
-      allowedRoles: ["admin", "doctor", "nurse", "pharmacist", "lab_tech"],
+      allowedRoles: ["admin", "doctor", "nurse", "pharmacist", "lab_tech", "patient"],
       items: [
         { title: "Overview", url: "/dashboard" },
-        { title: "Activities Log", url: "/activities-log" },
+        { title: "Activities Log", url: "/activities-log", allowedRoles: ["admin", "doctor", "nurse", "pharmacist", "lab_tech"] },
       ],
     },
     {

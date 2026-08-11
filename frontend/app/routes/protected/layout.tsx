@@ -28,11 +28,12 @@ const Layout = () => {
       const hasAccess = currentRouteConfig.allowedRoles.includes(userRole);
 
       if (!hasAccess) {
-        toast.error("Unauthorized Access");
         // Redirect to a safe page based on role, or just dashboard
         if (userRole === "patient") {
+          // Silently redirect patients to their profile if they hit a staff-only page
           navigate(`/profile/${session?.user?.id}`, { replace: true });
         } else {
+          toast.error("Unauthorized Access");
           navigate("/dashboard", { replace: true });
         }
       }
