@@ -33,13 +33,15 @@ export const list = query({
     const limit = Math.max(1, args.limit ?? 10);
     const role = args.role;
 
-    const q = ctx.db.query("users");
-    const filtered =
+    const all = await (
       role && role !== "all" && role !== ""
-        ? q.filter((qq) => qq.eq(qq.field("role"), role))
-        : q;
-    const total = (await filtered.collect()).length;
-    const all = await filtered.order("desc").take(page * limit);
+        ? ctx.db.query("users").filter((qq) => qq.eq(qq.field("role"), role))
+        : ctx.db.query("users")
+    )
+      .order("desc")
+      .collect();
+
+    const total = all.length;
     return paginate(all, page, limit, total);
   },
 });
