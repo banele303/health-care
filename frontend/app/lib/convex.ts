@@ -7,7 +7,8 @@ import { useCallback, useState } from "react";
 import type { FunctionReference } from "convex/server";
 
 export const convex = new ConvexReactClient(
-  import.meta.env.VITE_CONVEX_URL as string,
+  (import.meta.env.VITE_CONVEX_URL ||
+    "https://animated-seahorse-414.convex.cloud") as string,
 );
 
 export const CONVEX_SITE_URL = (import.meta.env.VITE_CONVEX_SITE_URL ||
