@@ -1,6 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import { query, mutation, action, internalQuery, internalMutation } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
+import { signIn } from "./auth";
 import { paginate, requireRole, requireUser, userIdFromSubject, type Role } from "./lib";
 
 const ROLES: Role[] = ["admin", "doctor", "nurse", "pharmacist", "lab_tech", "patient"];
@@ -166,7 +167,7 @@ export const create = action({
 
     let createdResult: any;
     try {
-      createdResult = await ctx.runAction(api.auth.signIn, {
+      createdResult = await signIn(ctx, {
         provider: "password",
         flow: "signUp",
         params: {
@@ -179,11 +180,11 @@ export const create = action({
       try {
         createdResult = await ctx.runAction(api.auth.signIn, {
           provider: "password",
+          flow: "signUp",
           params: {
             email: args.email,
             password: args.password,
             name: args.name,
-            flow: "signUp",
           },
         });
       } catch (e2: any) {
