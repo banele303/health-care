@@ -6,6 +6,8 @@ import {
   Stethoscope,
   ReceiptCent,
   MessagesSquare,
+  MessageCircle,
+  Brain,
 } from "lucide-react";
 
 export interface NavItem {
@@ -79,6 +81,24 @@ export const navConfig: {
       allowedRoles: ["admin", "doctor", "nurse"],
       items: [
         { title: "Patient CRM", url: "/crm" },
+      ],
+    },
+    {
+      title: "Team Messaging",
+      url: "/messaging",
+      icon: MessageCircle,
+      allowedRoles: ["admin", "doctor", "nurse", "pharmacist", "lab_tech"],
+      items: [
+        { title: "Channels", url: "/messaging" },
+      ],
+    },
+    {
+      title: "AI Agents Hub",
+      url: "/ai-hub",
+      icon: Brain,
+      allowedRoles: ["admin", "doctor", "nurse"],
+      items: [
+        { title: "All Agents", url: "/ai-hub" },
       ],
     },
   ],

@@ -19,5 +19,7 @@ export default [
     route("profile/:id", "routes/protected/Profile.tsx"),
     route("financial-history", "routes/protected/FinancialHistory.tsx"),
     route("crm", "routes/protected/Crm.tsx"),
+    route("messaging", "routes/protected/Messaging.tsx"),
+    route("ai-hub", "routes/protected/AiHub.tsx"),
   ]),
 ] satisfies RouteConfig;

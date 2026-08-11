@@ -203,4 +203,70 @@ export default defineSchema({
     tone: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_lead", ["leadId"]),
+
+  // ── Messaging (Slack-like) ──
+  channels: defineTable({
+    name: v.string(),
+    description: v.optional(v.string()),
+    type: v.union(
+      v.literal("general"),
+      v.literal("department"),
+      v.literal("emergency"),
+      v.literal("direct"),
+      v.literal("ai_bot"),
+    ),
+    icon: v.optional(v.string()),
+    color: v.optional(v.string()),
+    members: v.array(v.string()), // userId[]
+    createdBy: v.string(),
+    isPrivate: v.optional(v.boolean()),
+    createdAt: v.number(),
+  })
+    .index("by_type", ["type"])
+    .index("by_name", ["name"]),
+
+  messages: defineTable({
+    channelId: v.string(),
+    senderId: v.string(),
+    senderName: v.string(),
+    senderRole: v.optional(v.string()),
+    content: v.string(),
+    type: v.union(
+      v.literal("text"),
+      v.literal("system"),
+      v.literal("ai"),
+      v.literal("file"),
+    ),
+    reactions: v.optional(v.array(v.object({
+      emoji: v.string(),
+      userIds: v.array(v.string()),
+    }))),
+    replyToId: v.optional(v.string()),
+    isEdited: v.optional(v.boolean()),
+    attachmentUrl: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_channel", ["channelId"])
+    .index("by_channel_time", ["channelId", "createdAt"]),
+
+  presence: defineTable({
+    userId: v.string(),
+    status: v.union(
+      v.literal("online"),
+      v.literal("away"),
+      v.literal("busy"),
+      v.literal("offline"),
+    ),
+    lastSeen: v.number(),
+  }).index("by_user", ["userId"]),
+
+  // ── AI Agent Logs ──
+  aiAgentLogs: defineTable({
+    agentId: v.string(), // e.g. "drug_interaction", "discharge_summary"
+    triggeredBy: v.string(), // userId
+    input: v.string(),
+    output: v.optional(v.string()),
+    status: v.union(v.literal("running"), v.literal("done"), v.literal("error")),
+    createdAt: v.number(),
+  }).index("by_agent", ["agentId"]),
 });

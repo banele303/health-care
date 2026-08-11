@@ -17,6 +17,7 @@ import type * as http from "../http.js";
 import type * as invoices from "../invoices.js";
 import type * as labResults from "../labResults.js";
 import type * as lib from "../lib.js";
+import type * as messaging from "../messaging.js";
 import type * as notifications from "../notifications.js";
 import type * as triage from "../triage.js";
 import type * as users from "../users.js";
@@ -37,6 +38,7 @@ declare const fullApi: ApiFromModules<{
   invoices: typeof invoices;
   labResults: typeof labResults;
   lib: typeof lib;
+  messaging: typeof messaging;
   notifications: typeof notifications;
   triage: typeof triage;
   users: typeof users;
