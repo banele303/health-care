@@ -30,10 +30,14 @@ const Layout = () => {
       if (!hasAccess) {
         toast.error("Unauthorized Access");
         // Redirect to a safe page based on role, or just dashboard
-        navigate("/dashboard", { replace: true });
+        if (userRole === "patient") {
+          navigate(`/profile/${session?.user?.id}`, { replace: true });
+        } else {
+          navigate("/dashboard", { replace: true });
+        }
       }
     }
-  }, [pathname, userRole, isPending, navigate]);
+  }, [pathname, userRole, isPending, navigate, session?.user?.id]);
 
   if (isPending) {
     return (
