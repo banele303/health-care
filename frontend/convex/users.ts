@@ -167,31 +167,19 @@ export const create = action({
 
     let createdResult: any;
     try {
-      createdResult = await signIn(ctx, {
+      createdResult = await ctx.runAction(signIn, {
         provider: "password",
-        flow: "signUp",
         params: {
           email: args.email,
           password: args.password,
           name: args.name,
+          flow: "signUp",
         },
       });
     } catch (e: any) {
-      try {
-        createdResult = await ctx.runAction(api.auth.signIn, {
-          provider: "password",
-          flow: "signUp",
-          params: {
-            email: args.email,
-            password: args.password,
-            name: args.name,
-          },
-        });
-      } catch (e2: any) {
-        throw new ConvexError(
-          e2.message || e.message || "Failed to create user account",
-        );
-      }
+      throw new ConvexError(
+        e.message || "Failed to create user account",
+      );
     }
 
     const userId: string | undefined =
