@@ -167,7 +167,7 @@ export const create = action({
 
     let createdResult: any;
     try {
-      createdResult = await ctx.runAction(signIn, {
+      createdResult = await ctx.runAction(signIn as any, {
         provider: "password",
         params: {
           email: args.email,
