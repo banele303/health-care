@@ -41,6 +41,8 @@ const Login = () => {
   const { data: userCount } = useQuery(api.users.count, {});
   const isFirstRun = userCount === 0;
 
+  const [isSignUpMode, setIsSignUpMode] = useState(false);
+
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "", rememberMe: false },
@@ -69,8 +71,8 @@ const Login = () => {
     setGlobalError("");
     setIsLoading(true);
     try {
-      if (isFirstRun) {
-        // First run: create the administrator account.
+      if (isFirstRun || isSignUpMode) {
+        // Create the administrator account.
         await signIn("password", {
           email: data.email,
           password: data.password,
@@ -134,7 +136,7 @@ const Login = () => {
           )}
           {/* form */}
           <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
-            {isFirstRun && (
+            {(isFirstRun || isSignUpMode) && (
               <Field className="space-y-1.5">
                 <FieldLabel
                   htmlFor="adminName"
@@ -192,9 +194,10 @@ const Login = () => {
               </div>
               <button
                 type="button"
+                onClick={() => setIsSignUpMode(!isSignUpMode)}
                 className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
               >
-                Forgot?
+                {isSignUpMode ? "Login instead" : "Need to recreate admin?"}
               </button>
             </div>
             <Button
@@ -205,11 +208,11 @@ const Login = () => {
               {isLoading ? (
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>{isFirstRun ? "Creating..." : "Verifying..."}</span>
+                  <span>{(isFirstRun || isSignUpMode) ? "Creating..." : "Verifying..."}</span>
                 </div>
               ) : (
                 <div className="flex items-center justify-center gap-2">
-                  {isFirstRun ? "Create Admin & Enter" : "Sign Into Portal"}
+                  {(isFirstRun || isSignUpMode) ? "Create Admin & Enter" : "Sign Into Portal"}
                   <ChevronRight
                     size={18}
                     className="group-hover:translate-x-1 transition-transform"
