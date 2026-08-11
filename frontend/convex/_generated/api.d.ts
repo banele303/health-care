@@ -11,6 +11,7 @@
 import type * as activityLogs from "../activityLogs.js";
 import type * as analyzeXRay from "../analyzeXRay.js";
 import type * as auth from "../auth.js";
+import type * as crm from "../crm.js";
 import type * as files from "../files.js";
 import type * as http from "../http.js";
 import type * as invoices from "../invoices.js";
@@ -30,6 +31,7 @@ declare const fullApi: ApiFromModules<{
   activityLogs: typeof activityLogs;
   analyzeXRay: typeof analyzeXRay;
   auth: typeof auth;
+  crm: typeof crm;
   files: typeof files;
   http: typeof http;
   invoices: typeof invoices;

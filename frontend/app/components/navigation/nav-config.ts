@@ -5,6 +5,7 @@ import {
   ClipboardPlus,
   Stethoscope,
   ReceiptCent,
+  MessagesSquare,
 } from "lucide-react";
 
 export interface NavItem {
@@ -70,6 +71,15 @@ export const navConfig: {
       icon: ReceiptCent,
       allowedRoles: ["admin", "doctor"],
       items: [{ title: "History", url: "/financial-history" }],
+    },
+    {
+      title: "CRM & AI Emails",
+      url: "/crm",
+      icon: MessagesSquare,
+      allowedRoles: ["admin", "doctor", "nurse"],
+      items: [
+        { title: "Patient CRM", url: "/crm" },
+      ],
     },
   ],
   navAdmin: [],

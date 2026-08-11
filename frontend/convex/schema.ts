@@ -159,4 +159,48 @@ export default defineSchema({
     link: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_user", ["user"]),
+
+  // ── CRM ──
+  crmLeads: defineTable({
+    patientId: v.optional(v.string()),
+    name: v.string(),
+    email: v.string(),
+    phone: v.optional(v.string()),
+    status: v.union(
+      v.literal("lead"),
+      v.literal("appointment_scheduled"),
+      v.literal("in_treatment"),
+      v.literal("followup_needed"),
+      v.literal("discharged"),
+    ),
+    priority: v.union(
+      v.literal("low"),
+      v.literal("medium"),
+      v.literal("high"),
+      v.literal("urgent"),
+    ),
+    notes: v.optional(v.string()),
+    assignedStaffId: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_status", ["status"])
+    .index("by_priority", ["priority"]),
+
+  crmCommunications: defineTable({
+    leadId: v.string(),
+    senderId: v.string(),
+    senderName: v.optional(v.string()),
+    recipientEmail: v.optional(v.string()),
+    subject: v.string(),
+    body: v.string(),
+    type: v.union(
+      v.literal("email"),
+      v.literal("call_note"),
+      v.literal("sms"),
+    ),
+    aiGenerated: v.boolean(),
+    tone: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_lead", ["leadId"]),
 });

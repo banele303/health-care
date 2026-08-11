@@ -59,6 +59,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
             `,
           }}
         />
+        {/* Puter.js — free client-side AI (no API key needed) */}
+        <script src="https://js.puter.com/v2/" async />
       </head>
       <body>
         <ConvexAuthProvider client={convex}>
