@@ -113,6 +113,27 @@ export const bootstrapRepair = mutation({
   },
 });
 
+export const cleanupOrphans = mutation({
+  args: {},
+  handler: async (ctx) => {
+    let deleted = 0;
+    const accounts = await ctx.db.query("authAccounts").collect();
+    for (const acc of accounts) {
+      if (!(await ctx.db.get(acc.userId))) {
+        await ctx.db.delete(acc._id);
+        deleted++;
+      }
+    }
+    const sessions = await ctx.db.query("authSessions").collect();
+    for (const sess of sessions) {
+      if (!(await ctx.db.get(sess.userId))) {
+        await ctx.db.delete(sess._id);
+      }
+    }
+    return deleted;
+  },
+});
+
 /**
  * Admin-only user creation.
  * Uses Convex Auth's sign-up REST endpoint so the password is hashed

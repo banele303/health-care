@@ -90,7 +90,17 @@ const Login = () => {
       }
       navigate("/dashboard"); // 👈 Redirect user after login
     } catch (error: any) {
-      setGlobalError(error?.message || "Invalid email or password");
+      if (error?.message?.includes("reading '_id'") || error?.message?.includes("already exists")) {
+        // Handle orphaned auth account edge-case
+        try {
+          await convex.mutation(api.users.cleanupOrphans, {});
+          setGlobalError("Orphaned account detected and cleaned up. Please try submitting again.");
+        } catch(e) {
+          setGlobalError(error?.message || "Invalid email or password");
+        }
+      } else {
+        setGlobalError(error?.message || "Invalid email or password");
+      }
     } finally {
       setIsLoading(false);
     }
