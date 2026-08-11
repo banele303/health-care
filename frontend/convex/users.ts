@@ -145,11 +145,11 @@ export const create = action({
     medicalHistory: v.optional(v.string()),
     age: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<any> => {
     // Actions have no ctx.db — check identity + role via runQuery
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new ConvexError("Unauthorized");
-    const actor: any = await ctx.runQuery(internal.users.getUserDoc, {
+    const actor: any = await ctx.runQuery((internal.users as any).getUserDoc, {
       userId: userIdFromSubject(identity),
     });
     if (!actor) throw new ConvexError("Unauthorized");
@@ -201,7 +201,7 @@ export const create = action({
     if (args.age) fields.age = args.age;
 
     if (userId) {
-      await ctx.runMutation(internal.users.setFields, { userId, fields });
+      await ctx.runMutation((internal.users as any).setFields, { userId, fields });
       return {
         user: {
           id: userId,
@@ -212,11 +212,11 @@ export const create = action({
       };
     } else {
       // Fallback: locate by email
-      const found = await ctx.runQuery(internal.users.getByEmail, {
+      const found: any = await ctx.runQuery((internal.users as any).getByEmail, {
         email: args.email,
       });
       if (found) {
-        await ctx.runMutation(internal.users.setFields, {
+        await ctx.runMutation((internal.users as any).setFields, {
           userId: found._id,
           fields,
         });
