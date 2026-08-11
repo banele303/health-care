@@ -1,7 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import { query, mutation, action, internalQuery, internalMutation } from "./_generated/server";
 import { api, internal } from "./_generated/api";
-import { getAuthUserId } from "@convex-dev/auth/server";
+import { createAccount, getAuthUserId } from "@convex-dev/auth/server";
 import { paginate, requireRole, requireUser, userIdFromSubject, type Role } from "./lib";
 
 const ROLES: Role[] = ["admin", "doctor", "nurse", "pharmacist", "lab_tech", "patient"];
