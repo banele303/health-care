@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQuery } from "@/lib/convex";
 import { api } from "@convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
@@ -19,10 +20,11 @@ export default function HMSDashboard() {
   const navigate = useNavigate();
   const user = session?.user;
 
-  if (user?.role === "patient") {
-    navigate(`/profile/${session?.user.id}`); // 👈 Redirect user after login
-  }
-
+  useEffect(() => {
+    if (user?.role === "patient") {
+      navigate(`/profile/${user.id}`); // 👈 Redirect user after login
+    }
+  }, [user, navigate]);
   // Fetch users for StatsCards calculation
   const { data: userData, isLoading: isDataLoading } = useQuery(
     api.users.list,
