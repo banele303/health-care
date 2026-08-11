@@ -17,6 +17,7 @@ import { loginSchema } from "@/components/auth/login.schema";
 import Loader from "@/components/global/Loader";
 import { useQuery, convex } from "@/lib/convex";
 import { api } from "@convex/_generated/api";
+import { authClient } from "@/lib/auth-client";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -33,7 +34,8 @@ const Login = () => {
   const [adminName, setAdminName] = useState("");
   const navigate = useNavigate(); // Hook for redirection
   const { isAuthenticated, isLoading: isAuthLoading } = useConvexAuth();
-  const { signIn } = useAuthActions();
+  const { signIn, signOut } = useAuthActions();
+  const { data: session, isPending: isSessionLoading } = authClient.useSession();
 
   // First-run detection: zero users => show "Create Admin" instead of sign-in.
   const { data: userCount } = useQuery(api.users.count, {});
@@ -44,7 +46,7 @@ const Login = () => {
     defaultValues: { email: "", password: "", rememberMe: false },
   });
 
-  if (isAuthLoading) {
+  if (isAuthLoading || (isAuthenticated && isSessionLoading)) {
     return (
       <div className="min-h-screen flex justify-center items-center">
         <Loader label="Loading..." />
@@ -54,6 +56,11 @@ const Login = () => {
 
   // Redirect if logged in
   if (isAuthenticated) {
+    if (!session?.user) {
+      // The user document was deleted from the DB but the auth cookie remains.
+      signOut();
+      return null;
+    }
     return <Navigate to="/dashboard" replace />;
   }
 
