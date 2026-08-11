@@ -78,9 +78,25 @@ const Login = () => {
           password: data.password,
           flow: "signUp",
         });
-        await convex.mutation(api.users.bootstrapSelfAdmin, {
-          name: adminName || "Admin",
-        });
+        
+        // Wait for the auth token to propagate to the Convex client
+        let retries = 5;
+        while (retries > 0) {
+          try {
+            await convex.mutation(api.users.bootstrapSelfAdmin, {
+              name: adminName || "Admin",
+            });
+            break;
+          } catch (e: any) {
+            if (e.message.includes("Not signed in")) {
+              await new Promise(r => setTimeout(r, 500));
+              retries--;
+              if (retries === 0) throw e;
+            } else {
+              throw e;
+            }
+          }
+        }
         toast.success("Admin account created. Welcome to MedFlow!");
       } else {
         // signIn throws on failure in modern @convex-dev/auth

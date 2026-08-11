@@ -1,7 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import { query, mutation, action, internalQuery, internalMutation } from "./_generated/server";
 import { api, internal } from "./_generated/api";
-import { createAccount } from "@convex-dev/auth/server";
+import { getAuthUserId } from "@convex-dev/auth/server";
 import { paginate, requireRole, requireUser, userIdFromSubject, type Role } from "./lib";
 
 const ROLES: Role[] = ["admin", "doctor", "nurse", "pharmacist", "lab_tech", "patient"];
@@ -12,9 +12,9 @@ const ROLES: Role[] = ["admin", "doctor", "nurse", "pharmacist", "lab_tech", "pa
 export const me = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-    const user: any = await ctx.db.get(userIdFromSubject(identity) as any);
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    const user: any = await ctx.db.get(userId);
     return user ?? null;
   },
 });
@@ -81,13 +81,13 @@ export const count = query({
 export const bootstrapSelfAdmin = mutation({
   args: { name: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new ConvexError("Not signed in");
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new ConvexError("Not signed in");
     const total = (await ctx.db.query("users").collect()).length;
     if (total !== 1) {
       throw new ConvexError("First-admin setup is no longer available");
     }
-    await ctx.db.patch(userIdFromSubject(identity) as any, {
+    await ctx.db.patch(userId, {
       role: "admin",
       ...(args.name ? { name: args.name } : {}),
     });
