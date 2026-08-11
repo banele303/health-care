@@ -59,6 +59,7 @@ const Login = () => {
     if (!session?.user) {
       // The user document was deleted from the DB but the auth cookie remains.
       signOut();
+      toast.error("Corrupted account detected: User profile missing. You have been safely logged out. Please delete the old authAccount from the Convex dashboard.");
       return null;
     }
     return <Navigate to="/dashboard" replace />;
