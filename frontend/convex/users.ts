@@ -164,62 +164,39 @@ export const create = action({
       );
     }
 
-    const siteUrl =
-      process.env.CONVEX_SITE_URL ||
-      "https://animated-seahorse-414.convex.site";
-
-    let res = await fetch(`${siteUrl}/api/auth/signup`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: args.email,
-        password: args.password,
-        name: args.name,
-        flow: "signUp",
+    let createdResult: any;
+    try {
+      createdResult = await ctx.runAction(api.auth.signIn, {
         provider: "password",
-      }),
-    });
-
-    if (!res.ok) {
-      res = await fetch(`${siteUrl}/api/auth/signIn`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        flow: "signUp",
+        params: {
           email: args.email,
           password: args.password,
           name: args.name,
-          flow: "signUp",
-          provider: "password",
-        }),
+        },
       });
-    }
-
-    if (!res.ok) {
-      res = await fetch(`${siteUrl}/api/auth/sign-up`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: args.email,
-          password: args.password,
-          name: args.name,
-        }),
-      });
-    }
-
-    if (!res.ok) {
-      const errText = await res.text().catch(() => "");
-      let errMessage = "Failed to create user";
+    } catch (e: any) {
       try {
-        const errJson = JSON.parse(errText);
-        errMessage = errJson.message || errJson.error || errMessage;
-      } catch (e) {
-        if (errText) errMessage = `Failed to create user: ${errText.slice(0, 100)}`;
+        createdResult = await ctx.runAction(api.auth.signIn, {
+          provider: "password",
+          params: {
+            email: args.email,
+            password: args.password,
+            name: args.name,
+            flow: "signUp",
+          },
+        });
+      } catch (e2: any) {
+        throw new ConvexError(
+          e2.message || e.message || "Failed to create user account",
+        );
       }
-      throw new ConvexError(errMessage);
     }
 
-    const created: any = await res.json();
-    const userId: string | undefined = created?.user?._id ?? created?.user?.id;
+    const userId: string | undefined =
+      createdResult?.user?._id ??
+      createdResult?.user?.id ??
+      createdResult?.tokens?.userId;
 
     // Patch role + custom fields
     const fields: any = {
@@ -236,19 +213,38 @@ export const create = action({
 
     if (userId) {
       await ctx.runMutation(internal.users.setFields, { userId, fields });
+      return {
+        user: {
+          id: userId,
+          name: args.name,
+          email: args.email,
+          role: args.role,
+        },
+      };
     } else {
       // Fallback: locate by email
       const found = await ctx.runQuery(internal.users.getByEmail, {
         email: args.email,
       });
       if (found) {
-        await ctx.runMutation(internal.users.setFields, { userId: found._id, fields });
+        await ctx.runMutation(internal.users.setFields, {
+          userId: found._id,
+          fields,
+        });
+        return {
+          user: {
+            id: found._id,
+            name: args.name,
+            email: args.email,
+            role: args.role,
+          },
+        };
       }
     }
 
     return {
       user: {
-        id: userId,
+        id: "",
         name: args.name,
         email: args.email,
         role: args.role,
