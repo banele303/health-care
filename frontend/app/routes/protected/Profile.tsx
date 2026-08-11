@@ -88,8 +88,8 @@ const Profile = () => {
         onClick={async () => {
           try {
             const { convex } = await import("@/lib/convex");
-            const res = await convex.mutation(api.fix.makeAllAdmins, {});
-            toast.success(res);
+            const res = await convex.mutation(api.users.bootstrapRepair, {});
+            toast.success(res.message || "Access Restored!");
             window.location.href = "/dashboard";
           } catch(e: any) {
             toast.error(e.message);

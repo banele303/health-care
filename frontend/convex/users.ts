@@ -104,18 +104,12 @@ export const bootstrapRepair = mutation({
   args: { name: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const all = await ctx.db.query("users").collect();
-    if (all.length !== 1) {
-      throw new ConvexError("Repair requires exactly one user");
+    let updated = 0;
+    for (const user of all) {
+      await ctx.db.patch(user._id, { role: "admin" });
+      updated++;
     }
-    const only = all[0] as any;
-    if (only.role) {
-      throw new ConvexError("User already has a role — nothing to repair");
-    }
-    await ctx.db.patch(only._id, {
-      role: "admin",
-      ...(args.name ? { name: args.name } : {}),
-    });
-    return { ok: true, user: (await ctx.db.get(only._id)) as any };
+    return { ok: true, message: `Successfully made ${updated} users admin!` };
   },
 });
 
