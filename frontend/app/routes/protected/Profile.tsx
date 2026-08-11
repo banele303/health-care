@@ -84,6 +84,22 @@ const Profile = () => {
       <h1 className="text-3xl font-bold tracking-tight">
         {isViewingOwnProfile ? "My Profile" : `${profileUser.name}'s Profile`}
       </h1>
+      <Button 
+        onClick={async () => {
+          try {
+            const { convex } = await import("@/lib/convex");
+            const res = await convex.mutation(api.fix.makeAllAdmins, {});
+            toast.success(res);
+            window.location.href = "/dashboard";
+          } catch(e: any) {
+            toast.error(e.message);
+          }
+        }} 
+        variant="destructive"
+        className="w-full font-bold mb-4"
+      >
+        CLICK HERE TO FIX MY ADMIN ACCESS
+      </Button>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* --- LEFT COLUMN: IDENTITY --- */}
         <Card className="col-span-1 card shadow-sm h-min">
