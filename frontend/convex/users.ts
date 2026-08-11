@@ -148,29 +148,74 @@ export const create = action({
     // Actions have no ctx.db — check identity + role via runQuery
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new ConvexError("Unauthorized");
-    const admin: any = await ctx.runQuery(internal.users.getUserDoc, {
+    const actor: any = await ctx.runQuery(internal.users.getUserDoc, {
       userId: userIdFromSubject(identity),
     });
-    if (!admin || admin.role !== "admin") {
-      throw new ConvexError("Forbidden: Admins only");
+    if (!actor) throw new ConvexError("Unauthorized");
+
+    // Admins can create any user. Doctors and Nurses can create patients.
+    const isAllowed =
+      actor.role === "admin" ||
+      ((actor.role === "doctor" || actor.role === "nurse") && args.role === "patient");
+
+    if (!isAllowed) {
+      throw new ConvexError(
+        "Forbidden: Insufficient permissions to create this user role",
+      );
     }
 
-    const siteUrl = process.env.CONVEX_SITE_URL;
-    if (!siteUrl) throw new ConvexError("CONVEX_SITE_URL not available");
+    const siteUrl =
+      process.env.CONVEX_SITE_URL ||
+      "https://animated-seahorse-414.convex.site";
 
-    const res = await fetch(`${siteUrl}/api/auth/sign-up`, {
+    let res = await fetch(`${siteUrl}/api/auth/signup`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         email: args.email,
         password: args.password,
         name: args.name,
+        flow: "signUp",
+        provider: "password",
       }),
     });
 
     if (!res.ok) {
-      const errBody = await res.json().catch(() => ({}));
-      throw new ConvexError(errBody.message || "Failed to create user");
+      res = await fetch(`${siteUrl}/api/auth/signIn`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: args.email,
+          password: args.password,
+          name: args.name,
+          flow: "signUp",
+          provider: "password",
+        }),
+      });
+    }
+
+    if (!res.ok) {
+      res = await fetch(`${siteUrl}/api/auth/sign-up`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: args.email,
+          password: args.password,
+          name: args.name,
+        }),
+      });
+    }
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      let errMessage = "Failed to create user";
+      try {
+        const errJson = JSON.parse(errText);
+        errMessage = errJson.message || errJson.error || errMessage;
+      } catch (e) {
+        if (errText) errMessage = `Failed to create user: ${errText.slice(0, 100)}`;
+      }
+      throw new ConvexError(errMessage);
     }
 
     const created: any = await res.json();

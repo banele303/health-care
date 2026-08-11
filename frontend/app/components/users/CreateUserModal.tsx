@@ -171,7 +171,8 @@ const CreateUserModal = ({ role, user, loading }: UserModalProps) => {
 
       if (error) {
         setIsCreating(false);
-        throw error;
+        toast.error(error.message || "Failed to create user");
+        return;
       }
       if (createdUser && role === "patient" && data.status === "admitted") {
         // handle admission(trigger)
