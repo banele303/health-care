@@ -28,7 +28,7 @@ export function JarvisRightPanel() {
   const connections = connectionsRes?.data ?? [];
   
   const dashboardRes = useQuery(api.jarvisDashboard.getAll, {});
-  const dashboard = dashboardRes?.data ?? {};
+  const dashboard: any = dashboardRes?.data ?? {};
 
   const runBriefing = useMutation(api.jarvisBriefing.runBriefing);
   const toggleConn = useMutation(api.jarvisConnections.toggleConnection);
