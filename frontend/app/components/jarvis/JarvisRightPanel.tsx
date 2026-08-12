@@ -32,6 +32,7 @@ export function JarvisRightPanel() {
 
   const runBriefing = useMutation(api.jarvisBriefing.runBriefing);
   const toggleConn = useMutation(api.jarvisConnections.toggleConnection);
+  const updateConnLabel = useMutation(api.jarvisConnections.updateAccountLabel);
   const executeTool = useMutation(api.jarvisTools.executeTool);
 
   const [activeTab, setActiveTab] = useState<"workspace" | "services" | "tools">("workspace");
@@ -192,24 +193,54 @@ export function JarvisRightPanel() {
       {activeTab === "services" && (
         <div className="space-y-2.5">
           {connections.map((c: any) => (
-            <div key={c.toolkit} className="jarvis-glass-card p-3 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <span className={`h-2 w-2 rounded-full ${c.status === "connected" ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]" : "bg-white/20"}`} />
-                <div>
-                  <p className="text-[12px] font-medium text-white/80">{c.name}</p>
-                  <p className="text-[10px] text-white/35">{c.accountLabel}</p>
+            <div key={c.toolkit} className="jarvis-glass-card p-3 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <span className={`h-2 w-2 rounded-full ${c.status === "connected" ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]" : "bg-white/20"}`} />
+                  <div>
+                    <p className="text-[12px] font-medium text-white/80">{c.name}</p>
+                    <p className="text-[10px] text-white/35">{c.accountLabel}</p>
+                  </div>
                 </div>
+                <button
+                  onClick={() => handleToggleConn(c.toolkit)}
+                  className={`rounded-lg px-2.5 py-1 text-[10px] font-medium transition ${
+                    c.status === "connected"
+                      ? "border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
+                      : "border border-white/10 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white"
+                  }`}
+                >
+                  {c.status === "connected" ? "Connected" : "Connect"}
+                </button>
               </div>
-              <button
-                onClick={() => handleToggleConn(c.toolkit)}
-                className={`rounded-lg px-2.5 py-1 text-[10px] font-medium transition ${
-                  c.status === "connected"
-                    ? "border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
-                    : "border border-white/10 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white"
-                }`}
-              >
-                {c.status === "connected" ? "Connected" : "Connect"}
-              </button>
+
+              {/* Configure Account Email for Gmail */}
+              {c.toolkit === "gmail" && (
+                <div className="mt-1 pt-2 border-t border-white/5 flex gap-1.5">
+                  <input
+                    type="email"
+                    defaultValue={c.accountLabel?.includes("@") ? c.accountLabel : "banelesouthflow@gmail.com"}
+                    placeholder="Enter your Gmail address..."
+                    id="gmail-input"
+                    className="flex-1 rounded-md border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] text-white/80 outline-none focus:border-sky-400/40"
+                  />
+                  <button
+                    onClick={async () => {
+                      const input = (document.getElementById("gmail-input") as HTMLInputElement)?.value;
+                      if (!input) return;
+                      try {
+                        await updateConnLabel.mutateAsync({ toolkit: "gmail", accountLabel: input });
+                        toast.success("Gmail address linked!", { description: `Connected to ${input}` });
+                      } catch {
+                        toast.error("Failed to link email.");
+                      }
+                    }}
+                    className="rounded-md border border-sky-400/30 bg-sky-500/20 px-2 py-1 text-[10px] text-sky-200 transition hover:bg-sky-500/30"
+                  >
+                    Link Gmail
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>

@@ -58,9 +58,9 @@ export const toggleConnection = mutation({
   },
 });
 
-export const touchSync = mutation({
-  args: { toolkit: v.string() },
-  handler: async (ctx, { toolkit }) => {
+export const updateAccountLabel = mutation({
+  args: { toolkit: v.string(), accountLabel: v.string() },
+  handler: async (ctx, { toolkit, accountLabel }) => {
     const { identity, user } = await requireUser(ctx);
     const userId = (user?._id ?? identity.subject) as string;
 
@@ -70,7 +70,16 @@ export const touchSync = mutation({
       .first();
 
     if (existing) {
-      await ctx.db.patch(existing._id, { lastSync: Date.now() });
+      await ctx.db.patch(existing._id, { accountLabel, status: "connected", lastSync: Date.now() });
+    } else {
+      await ctx.db.insert("jarvisConnections", {
+        userId,
+        toolkit,
+        name: toolkit === "gmail" ? "Gmail / Email" : toolkit,
+        status: "connected",
+        accountLabel,
+        lastSync: Date.now(),
+      });
     }
   },
 });
