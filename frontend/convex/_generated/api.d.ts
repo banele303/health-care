@@ -21,6 +21,7 @@ import type * as jarvisDashboard from "../jarvisDashboard.js";
 import type * as jarvisMemory from "../jarvisMemory.js";
 import type * as jarvisMessages from "../jarvisMessages.js";
 import type * as jarvisObjective from "../jarvisObjective.js";
+import type * as jarvisPreceptorship from "../jarvisPreceptorship.js";
 import type * as jarvisTimeline from "../jarvisTimeline.js";
 import type * as jarvisTodos from "../jarvisTodos.js";
 import type * as jarvisTools from "../jarvisTools.js";
@@ -52,6 +53,7 @@ declare const fullApi: ApiFromModules<{
   jarvisMemory: typeof jarvisMemory;
   jarvisMessages: typeof jarvisMessages;
   jarvisObjective: typeof jarvisObjective;
+  jarvisPreceptorship: typeof jarvisPreceptorship;
   jarvisTimeline: typeof jarvisTimeline;
   jarvisTodos: typeof jarvisTodos;
   jarvisTools: typeof jarvisTools;

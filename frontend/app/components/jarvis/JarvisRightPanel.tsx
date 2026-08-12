@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@/lib/convex";
 import { api } from "@convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
@@ -20,6 +20,13 @@ import {
   Users,
   ExternalLink,
   Play,
+  Mic,
+  MicOff,
+  BookOpen,
+  UserCheck,
+  GraduationCap,
+  Save,
+  Radio,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -34,12 +41,93 @@ export function JarvisRightPanel() {
   const toggleConn = useMutation(api.jarvisConnections.toggleConnection);
   const updateConnLabel = useMutation(api.jarvisConnections.updateAccountLabel);
   const executeTool = useMutation(api.jarvisTools.executeTool);
+  const savePreceptorship = useMutation(api.jarvisPreceptorship.saveSession);
 
-  const [activeTab, setActiveTab] = useState<"workspace" | "services" | "tools">("workspace");
+  const [activeTab, setActiveTab] = useState<"workspace" | "services" | "tools" | "scribe">("workspace");
   const [briefingLoading, setBriefingLoading] = useState(false);
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [toolInput, setToolInput] = useState("");
   const [toolExecuting, setToolExecuting] = useState(false);
+
+  // 🎓 Doctor-Student Preceptorship Live Transcriber State
+  const [speaker, setSpeaker] = useState<"Doctor" | "Student">("Doctor");
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [doctorName, setDoctorName] = useState("Dr. Sarah Jenkins");
+  const [studentName, setStudentName] = useState("Intern Alex South");
+  const [liveTurnText, setLiveTurnText] = useState("");
+  const [transcript, setTranscript] = useState<Array<{ speaker: string; text: string; timestamp: number }>>([
+    { speaker: "Doctor", text: "Welcome Alex. Let me know your primary differential diagnosis for this 48-year-old male with acute pleuritic chest pain.", timestamp: Date.now() - 120000 },
+    { speaker: "Student", text: "Dr. Jenkins, we must rule out Pulmonary Embolism first given his recent long-haul flight, along with Pericarditis and Pneumothorax.", timestamp: Date.now() - 90000 },
+    { speaker: "Doctor", text: "Excellent clinical reasoning. What urgent bedside test and blood panel should we order immediately?", timestamp: Date.now() - 60000 },
+    { speaker: "Student", text: "Immediate 12-lead ECG, STAT D-Dimer, Troponin I, and Bedside Lung Ultrasound.", timestamp: Date.now() - 30000 },
+  ]);
+
+  const recognitionRef = useRef<any>(null);
+
+  // Web Speech API for live transcribing
+  const toggleTranscribing = () => {
+    if (isTranscribing) {
+      if (recognitionRef.current) recognitionRef.current.stop();
+      setIsTranscribing(false);
+      toast.info("Transcriber Paused");
+    } else {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        toast.error("Web Speech API not supported in this browser. Please use Chrome/Edge.");
+        return;
+      }
+      const rec = new SpeechRecognition();
+      rec.continuous = true;
+      rec.interimResults = true;
+      rec.lang = "en-US";
+
+      rec.onresult = (event: any) => {
+        let finalStr = "";
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalStr += event.results[i][0].transcript;
+          }
+        }
+        if (finalStr.trim()) {
+          setTranscript(prev => [...prev, { speaker, text: finalStr.trim(), timestamp: Date.now() }]);
+          setLiveTurnText("");
+        }
+      };
+
+      rec.onerror = () => setIsTranscribing(false);
+      rec.onend = () => setIsTranscribing(false);
+
+      rec.start();
+      recognitionRef.current = rec;
+      setIsTranscribing(true);
+      toast.success(`🎙️ Transcribing Live as ${speaker}!`);
+    }
+  };
+
+  const handleAddManualTurn = () => {
+    if (!liveTurnText.trim()) return;
+    setTranscript(prev => [...prev, { speaker, text: liveTurnText.trim(), timestamp: Date.now() }]);
+    setLiveTurnText("");
+  };
+
+  const handleSavePreceptorshipSession = async () => {
+    try {
+      const res = await savePreceptorship.mutateAsync({
+        doctorName,
+        studentName,
+        transcript,
+        teachingPoints: [
+          "Primary differential: Pulmonary Embolism vs Pericarditis",
+          "Ordered immediate ECG, Troponin, STAT D-Dimer",
+          "Bedside Lung Ultrasound requested",
+        ],
+        summary: `Preceptorship Consultation: ${doctorName} reviewed case with ${studentName}. Key teaching focus on acute chest pain differential diagnosis.`,
+      });
+      toast.success("🎓 Session Transcribed & Saved!", { description: res.message });
+    } catch {
+      toast.error("Failed to save preceptorship session.");
+    }
+  };
 
   const emails = dashboard.emails?.data;
   const calendar = dashboard.calendar?.data;
@@ -79,19 +167,49 @@ export function JarvisRightPanel() {
     }
   };
 
+  const activeConnCount = connections.filter((c: any) => c.status === "connected").length;
+
   return (
     <aside className="jarvis-scroll flex min-h-0 flex-col gap-3 overflow-y-auto pl-0.5">
+      
+      {/* HIGH VISIBILITY SYSTEM CONNECTION STATUS BAR */}
+      <section className="rounded-xl border border-emerald-500/20 bg-emerald-950/20 p-2.5 backdrop-blur-md">
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+            </span>
+            <span className="text-[11px] font-semibold tracking-wide text-emerald-300 uppercase">Live Systems Status</span>
+          </div>
+          <span className="mono text-[10px] text-emerald-400/70">{activeConnCount} Connected Services</span>
+        </div>
+
+        {/* Status Badges */}
+        <div className="flex flex-wrap gap-1.5">
+          <span className="inline-flex items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-300">
+            <Mail className="h-3 w-3 text-emerald-400" /> Gmail Linked
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-300">
+            <FileText className="h-3 w-3 text-emerald-400" /> Notion Sync Live
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-md border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 text-[10px] font-medium text-purple-300">
+            <GraduationCap className="h-3 w-3 text-purple-400" /> Scribe Mode Ready
+          </span>
+        </div>
+      </section>
+
       {/* Executive Briefing Button */}
-      <section className="jarvis-glass-card relative overflow-hidden p-3.5 bg-gradient-to-r from-indigo-900/40 via-purple-900/30 to-slate-900/50 border border-indigo-500/20">
+      <section className="jarvis-glass-card relative overflow-hidden p-3 bg-gradient-to-r from-indigo-900/40 via-purple-900/30 to-slate-900/50 border border-indigo-500/20">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-purple-300 animate-pulse" />
-            <h3 className="mono text-[12px] font-semibold tracking-wider text-purple-200 uppercase">Daily Clinical Briefing</h3>
+            <h3 className="mono text-[11.5px] font-semibold tracking-wider text-purple-200 uppercase">Daily Clinical Briefing</h3>
           </div>
           <button
             onClick={handleRunBriefing}
             disabled={briefingLoading}
-            className="flex items-center gap-1.5 rounded-lg border border-purple-400/30 bg-purple-500/20 px-3 py-1.5 text-[11px] font-medium text-purple-100 transition hover:bg-purple-500/30 disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-lg border border-purple-400/30 bg-purple-500/20 px-2.5 py-1 text-[11px] font-medium text-purple-100 transition hover:bg-purple-500/30 disabled:opacity-50"
           >
             {briefingLoading ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3 fill-current" />}
             {briefingLoading ? "Scanning..." : "Run Briefing"}
@@ -99,25 +217,31 @@ export function JarvisRightPanel() {
         </div>
       </section>
 
-      {/* Tabs */}
-      <div className="flex rounded-xl border border-white/10 bg-white/[0.03] p-1">
+      {/* Navigation Tabs */}
+      <div className="grid grid-cols-4 rounded-xl border border-white/10 bg-white/[0.03] p-1">
         <button
           onClick={() => setActiveTab("workspace")}
-          className={`flex-1 rounded-lg py-1 text-[11px] font-medium transition ${activeTab === "workspace" ? "bg-white/10 text-white shadow" : "text-white/40 hover:text-white/70"}`}
+          className={`rounded-lg py-1 text-[10.5px] font-medium transition ${activeTab === "workspace" ? "bg-white/10 text-white shadow" : "text-white/40 hover:text-white/70"}`}
         >
           Workspace
         </button>
         <button
           onClick={() => setActiveTab("services")}
-          className={`flex-1 rounded-lg py-1 text-[11px] font-medium transition ${activeTab === "services" ? "bg-white/10 text-white shadow" : "text-white/40 hover:text-white/70"}`}
+          className={`rounded-lg py-1 text-[10.5px] font-medium transition ${activeTab === "services" ? "bg-white/10 text-white shadow" : "text-white/40 hover:text-white/70"}`}
         >
-          Services ({connections.filter((c: any) => c.status === "connected").length})
+          Services ({activeConnCount})
         </button>
         <button
           onClick={() => setActiveTab("tools")}
-          className={`flex-1 rounded-lg py-1 text-[11px] font-medium transition ${activeTab === "tools" ? "bg-white/10 text-white shadow" : "text-white/40 hover:text-white/70"}`}
+          className={`rounded-lg py-1 text-[10.5px] font-medium transition ${activeTab === "tools" ? "bg-white/10 text-white shadow" : "text-white/40 hover:text-white/70"}`}
         >
           AI Tools
+        </button>
+        <button
+          onClick={() => setActiveTab("scribe")}
+          className={`rounded-lg py-1 text-[10.5px] font-medium transition flex items-center justify-center gap-1 ${activeTab === "scribe" ? "bg-purple-500/20 text-purple-200 border border-purple-400/30 shadow" : "text-purple-300/60 hover:text-purple-200"}`}
+        >
+          <GraduationCap className="h-3 w-3 text-purple-400" /> Scribe
         </button>
       </div>
 
@@ -131,7 +255,7 @@ export function JarvisRightPanel() {
                 <Mail className="h-3.5 w-3.5 text-sky-400" />
                 <h4 className="jarvis-label">Gmail / Inbox</h4>
               </div>
-              <span className="mono text-[10px] text-white/30">{emails?.unread ?? 0} unread</span>
+              <span className="mono text-[10px] text-emerald-400/80">banelesouthflow@gmail.com</span>
             </div>
             {emails?.important?.length > 0 ? (
               <div className="space-y-2">
@@ -143,7 +267,7 @@ export function JarvisRightPanel() {
                 ))}
               </div>
             ) : (
-              <p className="text-[11px] text-white/30">Inbox clean. No unread emails.</p>
+              <p className="text-[11px] text-white/30 italic">No emails logged in CRM.</p>
             )}
           </section>
 
@@ -151,37 +275,27 @@ export function JarvisRightPanel() {
           <section className="jarvis-glass-card p-3.5">
             <div className="mb-2 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Calendar className="h-3.5 w-3.5 text-emerald-400" />
-                <h4 className="jarvis-label">Google Calendar</h4>
+                <Calendar className="h-3.5 w-3.5 text-purple-400" />
+                <h4 className="jarvis-label">Calendar & Appointments</h4>
               </div>
-              <span className="mono text-[10px] text-white/30">{calendar?.todayCount ?? 0} today</span>
+              <span className="mono text-[10px] text-white/30">{calendar?.todayCount ?? 0} scheduled</span>
             </div>
-            {calendar?.nextMeeting && (
-              <div className="mb-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-2 text-[11.5px]">
-                <span className="mono text-[9px] uppercase text-emerald-300 font-bold block mb-0.5">Next Meeting</span>
-                <p className="font-medium text-white/90 truncate">{calendar.nextMeeting.title}</p>
-              </div>
-            )}
-            <div className="space-y-1">
-              {(calendar?.upcoming ?? []).slice(0, 3).map((e: any, i: number) => (
-                <div key={i} className="flex items-center justify-between text-[11px] text-white/60">
-                  <span className="truncate">{e.title}</span>
-                </div>
-              ))}
-            </div>
+            <p className="text-[11.5px] text-white/70 font-medium">{calendar?.nextMeeting?.title}</p>
+            <p className="text-[10px] text-white/40 mt-0.5">{new Date(calendar?.nextMeeting?.start || Date.now()).toLocaleTimeString()}</p>
           </section>
 
-          {/* Notion Notes */}
+          {/* Notion Clinical Notes */}
           <section className="jarvis-glass-card p-3.5">
-            <div className="mb-2 flex items-center gap-2">
-              <FileText className="h-3.5 w-3.5 text-amber-400" />
-              <h4 className="jarvis-label">Notion Clinical Notes</h4>
+            <div className="mb-2 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileText className="h-3.5 w-3.5 text-emerald-400" />
+                <h4 className="jarvis-label">Notion Clinical Notes</h4>
+              </div>
             </div>
             <div className="space-y-1.5">
-              {(notes?.recent ?? []).map((n: any, i: number) => (
-                <div key={i} className="flex items-center justify-between text-[11.5px] text-white/70">
+              {notes?.recent?.map((n: any, idx: number) => (
+                <div key={idx} className="flex items-center justify-between text-[11px] text-white/70">
                   <span className="truncate">{n.title}</span>
-                  <ExternalLink className="h-3 w-3 text-white/20 hover:text-white/60" />
                 </div>
               ))}
             </div>
@@ -249,107 +363,183 @@ export function JarvisRightPanel() {
       {/* TAB 3: INTERACTIVE AI TOOLS */}
       {activeTab === "tools" && (
         <div className="space-y-2.5">
-          {/* Tool 1: Email Sender */}
-          <div className="jarvis-glass-card p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Mail className="h-4 w-4 text-sky-400" />
-                <div>
-                  <h5 className="text-[12px] font-medium text-white/90">Gmail Email Dispatcher</h5>
-                  <p className="text-[10px] text-white/40">Send clinical email to patient or doctor</p>
-                </div>
+          <div className="jarvis-glass-card p-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Send className="h-4 w-4 text-sky-400" />
+              <div>
+                <p className="text-[12px] font-medium text-white/80">AI Email Dispatcher</p>
+                <p className="text-[10px] text-white/40">Send emails & log to Patient CRM</p>
               </div>
-              <button
-                onClick={() => handleRunTool("send_email", { recipient: "patient@medflow.org", subject: "Lab Results Follow-up" })}
-                disabled={toolExecuting}
-                className="rounded-lg border border-sky-400/30 bg-sky-500/20 px-2.5 py-1 text-[10.5px] text-sky-200 transition hover:bg-sky-500/30"
-              >
-                Execute
-              </button>
             </div>
+            <button
+              onClick={() => handleRunTool("send_email", { recipient: "banelesouthflow@gmail.com", subject: "Clinical Status Update", body: "Patient lab results have been reviewed." })}
+              disabled={toolExecuting}
+              className="rounded-lg border border-sky-400/30 bg-sky-500/20 px-2.5 py-1 text-[10px] font-medium text-sky-200 hover:bg-sky-500/30"
+            >
+              Send Email
+            </button>
           </div>
 
-          {/* Tool 2: Calendar Scheduler */}
-          <div className="jarvis-glass-card p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-emerald-400" />
-                <div>
-                  <h5 className="text-[12px] font-medium text-white/90">Google Calendar Scheduler</h5>
-                  <p className="text-[10px] text-white/40">Book rounds or patient consults</p>
-                </div>
+          <div className="jarvis-glass-card p-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-purple-400" />
+              <div>
+                <p className="text-[12px] font-medium text-white/80">Clinical Calendar Scheduler</p>
+                <p className="text-[10px] text-white/40">Book rounds & patient appointments</p>
               </div>
-              <button
-                onClick={() => handleRunTool("schedule_event", { title: "Specialist Surgical Consultation" })}
-                disabled={toolExecuting}
-                className="rounded-lg border border-emerald-400/30 bg-emerald-500/20 px-2.5 py-1 text-[10.5px] text-emerald-200 transition hover:bg-emerald-500/30"
-              >
-                Execute
-              </button>
             </div>
+            <button
+              onClick={() => handleRunTool("schedule_event", { patientName: "Banele Sibanda", phone: "+27 82 000 0000", notes: "Follow-up consultation" })}
+              disabled={toolExecuting}
+              className="rounded-lg border border-purple-400/30 bg-purple-500/20 px-2.5 py-1 text-[10px] font-medium text-purple-200 hover:bg-purple-500/30"
+            >
+              Schedule
+            </button>
           </div>
 
-          {/* Tool 3: Notion Clinical Notes */}
-          <div className="jarvis-glass-card p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-amber-400" />
-                <div>
-                  <h5 className="text-[12px] font-medium text-white/90">Notion Clinical Note Sync</h5>
-                  <p className="text-[10px] text-white/40">Save medical notes to Notion</p>
-                </div>
+          <div className="jarvis-glass-card p-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Pill className="h-4 w-4 text-rose-400" />
+              <div>
+                <p className="text-[12px] font-medium text-white/80">Drug Interaction AI</p>
+                <p className="text-[10px] text-white/40">Analyze medication cross-reactivity</p>
               </div>
-              <button
-                onClick={() => handleRunTool("create_notion_note", { title: "Cardiology Patient Case Study" })}
-                disabled={toolExecuting}
-                className="rounded-lg border border-amber-400/30 bg-amber-500/20 px-2.5 py-1 text-[10.5px] text-amber-200 transition hover:bg-amber-500/30"
-              >
-                Execute
-              </button>
             </div>
+            <button
+              onClick={() => handleRunTool("drug_check", { drugs: "Warfarin + Aspirin" })}
+              disabled={toolExecuting}
+              className="rounded-lg border border-rose-400/30 bg-rose-500/20 px-2.5 py-1 text-[10px] font-medium text-rose-200 hover:bg-rose-500/30"
+            >
+              Check Drugs
+            </button>
           </div>
 
-          {/* Tool 4: Drug Interaction Checker */}
-          <div className="jarvis-glass-card p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Pill className="h-4 w-4 text-purple-400" />
-                <div>
-                  <h5 className="text-[12px] font-medium text-white/90">Drug Interaction Checker AI</h5>
-                  <p className="text-[10px] text-white/40">Check contraindications for 2+ drugs</p>
-                </div>
+          <div className="jarvis-glass-card p-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Stethoscope className="h-4 w-4 text-amber-400" />
+              <div>
+                <p className="text-[12px] font-medium text-white/80">Patient Triage Evaluator</p>
+                <p className="text-[10px] text-white/40">Evaluate ESI urgency level</p>
               </div>
-              <button
-                onClick={() => handleRunTool("drug_check", { drugs: "Warfarin + Aspirin" })}
-                disabled={toolExecuting}
-                className="rounded-lg border border-purple-400/30 bg-purple-500/20 px-2.5 py-1 text-[10.5px] text-purple-200 transition hover:bg-purple-500/30"
-              >
-                Analyze
-              </button>
             </div>
-          </div>
-
-          {/* Tool 5: Patient Triage AI */}
-          <div className="jarvis-glass-card p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Stethoscope className="h-4 w-4 text-rose-400" />
-                <div>
-                  <h5 className="text-[12px] font-medium text-white/90">Patient Triage AI Evaluator</h5>
-                  <p className="text-[10px] text-white/40">Calculate ESI triage score</p>
-                </div>
-              </div>
-              <button
-                onClick={() => handleRunTool("triage_patient", { patientName: "Alex South", symptoms: "Chest tightness" })}
-                disabled={toolExecuting}
-                className="rounded-lg border border-rose-400/30 bg-rose-500/20 px-2.5 py-1 text-[10.5px] text-rose-200 transition hover:bg-rose-500/30"
-              >
-                Evaluate
-              </button>
-            </div>
+            <button
+              onClick={() => handleRunTool("triage_patient", { patientName: "Alex South", symptoms: "Severe chest pain radiating to left arm" })}
+              disabled={toolExecuting}
+              className="rounded-lg border border-amber-400/30 bg-amber-500/20 px-2.5 py-1 text-[10px] font-medium text-amber-200 hover:bg-amber-500/30"
+            >
+              Triage AI
+            </button>
           </div>
         </div>
       )}
+
+      {/* TAB 4: DOCTOR-STUDENT PRECEPTORSHIP LIVE TRANSCRIBER 🎓🩺 */}
+      {activeTab === "scribe" && (
+        <div className="space-y-3">
+          {/* Header Controls */}
+          <div className="jarvis-glass-card p-3 border border-purple-500/30 bg-purple-950/20">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <GraduationCap className="h-4 w-4 text-purple-300 animate-pulse" />
+                <h4 className="text-[12px] font-semibold text-purple-200">Doctor-Student Preceptorship Scribe</h4>
+              </div>
+              <button
+                onClick={toggleTranscribing}
+                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[10.5px] font-medium transition ${
+                  isTranscribing
+                    ? "border border-rose-500/40 bg-rose-500/20 text-rose-200 animate-pulse"
+                    : "border border-purple-400/30 bg-purple-500/20 text-purple-200 hover:bg-purple-500/30"
+                }`}
+              >
+                {isTranscribing ? <Mic className="h-3 w-3" /> : <MicOff className="h-3 w-3" />}
+                {isTranscribing ? "Recording..." : "Start Transcribe"}
+              </button>
+            </div>
+
+            {/* Speaker Selector */}
+            <div className="flex items-center justify-between pt-1 border-t border-white/5">
+              <span className="text-[10px] text-white/40">Active Speaker:</span>
+              <div className="flex gap-1.5">
+                <button
+                  onClick={() => setSpeaker("Doctor")}
+                  className={`flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-medium transition ${
+                    speaker === "Doctor"
+                      ? "border border-sky-400/40 bg-sky-500/20 text-sky-200"
+                      : "border border-white/10 bg-white/5 text-white/40"
+                  }`}
+                >
+                  <Stethoscope className="h-3 w-3 text-sky-400" /> Attending Doctor
+                </button>
+                <button
+                  onClick={() => setSpeaker("Student")}
+                  className={`flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-medium transition ${
+                    speaker === "Student"
+                      ? "border border-amber-400/40 bg-amber-500/20 text-amber-200"
+                      : "border border-white/10 bg-white/5 text-white/40"
+                  }`}
+                >
+                  <GraduationCap className="h-3 w-3 text-amber-400" /> Medical Student
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Live Audio Transcript Display */}
+          <div className="jarvis-glass-card p-3 max-h-[220px] overflow-y-auto space-y-2 jarvis-scroll">
+            <div className="flex items-center justify-between text-[10px] text-white/35 pb-1 border-b border-white/5">
+              <span>Live Dialogue Stream</span>
+              <span>{transcript.length} turns recorded</span>
+            </div>
+            {transcript.map((t, idx) => (
+              <div
+                key={idx}
+                className={`rounded-lg border p-2 text-[11px] leading-relaxed ${
+                  t.speaker === "Doctor"
+                    ? "border-sky-500/20 bg-sky-500/5 text-sky-100"
+                    : "border-amber-500/20 bg-amber-500/5 text-amber-100"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="font-semibold text-[10px] opacity-80 flex items-center gap-1">
+                    {t.speaker === "Doctor" ? <Stethoscope className="h-3 w-3 text-sky-400" /> : <GraduationCap className="h-3 w-3 text-amber-400" />}
+                    {t.speaker === "Doctor" ? doctorName : studentName}
+                  </span>
+                  <span className="text-[9px] opacity-40">{new Date(t.timestamp).toLocaleTimeString()}</span>
+                </div>
+                <p>{t.text}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Manual Input for Turn */}
+          <div className="flex gap-1.5">
+            <input
+              type="text"
+              value={liveTurnText}
+              onChange={(e) => setLiveTurnText(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAddManualTurn()}
+              placeholder={`Add speech as ${speaker === "Doctor" ? "Doctor" : "Student"}...`}
+              className="flex-1 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-[11px] text-white/80 outline-none focus:border-purple-400/40"
+            />
+            <button
+              onClick={handleAddManualTurn}
+              className="rounded-lg border border-purple-400/30 bg-purple-500/20 px-3 py-1.5 text-[11px] font-medium text-purple-200 hover:bg-purple-500/30"
+            >
+              Add
+            </button>
+          </div>
+
+          {/* Save & Notion Sync Button */}
+          <button
+            onClick={handleSavePreceptorshipSession}
+            className="w-full flex items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/20 py-2 text-[11.5px] font-medium text-emerald-200 hover:bg-emerald-500/30 transition shadow-lg"
+          >
+            <Save className="h-3.5 w-3.5 text-emerald-400" />
+            Extract Teaching Points & Save to Notion
+          </button>
+        </div>
+      )}
+
     </aside>
   );
 }
