@@ -79,15 +79,38 @@ export const count = query({
  * this can never be called again (no public signup afterwards).
  */
 export const bootstrapSelfAdmin = mutation({
-  args: { name: v.optional(v.string()) },
+  args: { name: v.optional(v.string()), email: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new ConvexError("Not signed in");
-    const total = (await ctx.db.query("users").collect()).length;
-    if (total !== 1) {
+    let userId = await getAuthUserId(ctx);
+    let user: any = userId ? await ctx.db.get(userId) : null;
+
+    if (!user && args.email) {
+      user = await ctx.db
+        .query("users")
+        .withIndex("email", (q) => q.eq("email", args.email!))
+        .first();
+    }
+
+    if (!user) {
+      const all = await ctx.db.query("users").collect();
+      if (all.length === 1) {
+        user = all[0];
+      }
+    }
+
+    if (!user) throw new ConvexError("User profile not found for admin setup");
+
+    const admins = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("role"), "admin"))
+      .collect();
+
+    const allUsers = await ctx.db.query("users").collect();
+    if (admins.length > 0 && allUsers.length > 1 && user.role && user.role !== "admin") {
       throw new ConvexError("First-admin setup is no longer available");
     }
-    await ctx.db.patch(userId, {
+
+    await ctx.db.patch(user._id, {
       role: "admin",
       ...(args.name ? { name: args.name } : {}),
     });
