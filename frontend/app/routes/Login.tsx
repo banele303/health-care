@@ -79,13 +79,28 @@ const Login = () => {
           flow: "signUp",
         });
         
-        // Wait briefly for auth token to propagate to the Convex client
-        await new Promise(r => setTimeout(r, 300));
-
-        await convex.mutation(api.users.bootstrapSelfAdmin, {
-          name: adminName || "Admin",
-          email: data.email,
-        });
+        // Wait for the auth token to propagate to the Convex client
+        let retries = 8;
+        let success = false;
+        while (retries > 0) {
+          try {
+            await convex.mutation(api.users.bootstrapSelfAdmin, {
+              name: adminName || "Admin",
+            });
+            success = true;
+            break;
+          } catch (e: any) {
+            if (e?.message?.includes("Not signed in")) {
+              await new Promise((r) => setTimeout(r, 500));
+              retries--;
+            } else {
+              throw e;
+            }
+          }
+        }
+        if (!success) {
+          throw new Error("Auth token pending. Please try logging in now.");
+        }
         toast.success("Admin account created. Welcome to MedFlow!");
       } else {
         // signIn throws on failure in modern @convex-dev/auth

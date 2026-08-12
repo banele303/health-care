@@ -79,17 +79,10 @@ export const count = query({
  * this can never be called again (no public signup afterwards).
  */
 export const bootstrapSelfAdmin = mutation({
-  args: { name: v.optional(v.string()), email: v.optional(v.string()) },
+  args: { name: v.optional(v.string()) },
   handler: async (ctx, args) => {
     let userId = await getAuthUserId(ctx);
     let user: any = userId ? await ctx.db.get(userId) : null;
-
-    if (!user && args.email) {
-      user = await ctx.db
-        .query("users")
-        .withIndex("email", (q) => q.eq("email", args.email!))
-        .first();
-    }
 
     if (!user) {
       const all = await ctx.db.query("users").collect();
@@ -98,7 +91,7 @@ export const bootstrapSelfAdmin = mutation({
       }
     }
 
-    if (!user) throw new ConvexError("User profile not found for admin setup");
+    if (!user) throw new ConvexError("Not signed in");
 
     const admins = await ctx.db
       .query("users")
