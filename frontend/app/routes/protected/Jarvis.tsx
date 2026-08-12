@@ -313,37 +313,11 @@ export default function JarvisPage() {
 
         {/* Center — Orb + Transcript + Input */}
         <main className="jarvis-glass flex min-h-0 flex-1 flex-col items-center rounded-none px-6 pt-4 pb-4">
-          {/* Header */}
-          <div className="mb-4 flex items-center gap-3 w-full">
-            <div className="flex items-baseline gap-2">
-              <h1 className="mono text-[15px] font-semibold tracking-[0.4em] text-white/90">J A R V I S</h1>
-              <span className="jarvis-label">MedFlow AI · Puter Powered</span>
-            </div>
-            <div className="ml-auto flex items-center gap-2">
-              {active && (
-                <span className="flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: "var(--jarvis-state-color)", boxShadow: "0 0 8px var(--jarvis-state-color)" }} />
-                  <span className="mono text-[10px] tracking-[0.25em] text-white/40 uppercase">Online</span>
-                </span>
-              )}
-              {mirroring && <span className="mono text-[10px] text-white/30 uppercase tracking-widest">Mirroring</span>}
-              <button onClick={handleClear} className="mono rounded border border-white/10 px-2 py-1 text-[9.5px] tracking-[0.2em] text-white/30 uppercase transition hover:border-white/25 hover:text-white/60">
-                <Trash2 className="h-3 w-3" />
-              </button>
-            </div>
-          </div>
-
-          {/* Live Connected Systems Bar */}
-          <div className="w-full mb-3 flex items-center justify-between rounded-xl border border-emerald-500/20 bg-emerald-950/20 px-3 py-1.5 backdrop-blur-md">
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-              <span className="mono text-[10px] font-semibold tracking-wider text-emerald-300 uppercase">Live Systems:</span>
-              <span className="mono text-[10px] text-emerald-200/80">Gmail (banelesouthflow@gmail.com) • Notion Sync • Preceptorship Scribe</span>
-            </div>
-            <span className="mono text-[9.5px] text-emerald-400/70 uppercase tracking-widest font-mono">🟢 100% OPERATIONAL</span>
+          {/* Top Actions */}
+          <div className="mb-2 flex items-center justify-end w-full">
+            <button onClick={handleClear} className="mono rounded border border-white/10 px-2 py-1 text-[9.5px] tracking-[0.2em] text-white/30 uppercase transition hover:border-white/25 hover:text-white/60">
+              <Trash2 className="h-3 w-3" />
+            </button>
           </div>
 
           {/* Orb */}
