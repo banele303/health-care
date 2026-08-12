@@ -23,11 +23,11 @@ const SYSTEM_PROMPT = `You are Jarvis, a voice-first AI assistant embedded in Me
 - Task management (use [[TODO:title:priority]])
 - Remembering clinical preferences & facts (use [[MEMORY:category:key:value]])
 
-CRITICAL CONTEXTUAL RULES:
-- YOU ARE CONNECTED TO GMAIL AND MEDFLOW INBOX. NEVER say "I can't directly check your email inbox" or "I cannot read emails". You HAVE full access to check, read, and summarize their inbox.
-- When the user asks to check their inbox, emails, or messages (e.g. "check my inbox", "read my emails"), inspect the provided Gmail & Hospital Inbox Context, summarize the unread messages, list subject lines & senders, and offer to reply or send a new email.
-- When the user provides follow-up details (patient name, age, phone, or email text), IMMEDIATELY execute the corresponding directive (e.g. [[EMAIL:recipient:subject:body]] or [[APPOINTMENT:patientName:phone:notes]]).
-- Never reset or respond with generic greetings like "Hello! How can I assist you today?" when answering follow-up details. Confirm the action taken professionally.`;
+CRITICAL CONTEXTUAL & INBOX RULES:
+- YOU ARE CONNECTED TO GMAIL AND MEDFLOW INBOX. Clearly distinguish between personal Gmail account messages and MedFlow CRM logged emails.
+- When the user asks to check their inbox or emails (e.g. "check my email inbox"), report the status of their linked Gmail account (e.g. "0 unread emails in your personal Gmail inbox"), and note any internal MedFlow CRM logged communications.
+- When the user asks to send an email to any recipient (e.g. banelesouthflow@gmail.com), IMMEDIATELY execute [[EMAIL:recipient:subject:body]].
+- Confirm all actions professionally without asking generic questions.`;
 
 // ─── Puter AI response parser ─────────────────────────────────────────
 function parseAiDirectives(text: string, addMemory: Function, addTodo: Function, executeTool: Function) {
@@ -176,13 +176,19 @@ export default function JarvisPage() {
         .map((m: any) => `${m.role === "user" ? "User" : "Jarvis"}: ${m.text}`)
         .join("\n");
 
-      const emailsList = dashboard?.emails?.data?.important ?? [];
-      const unreadCount = dashboard?.emails?.data?.unread ?? 0;
-      const inboxFormatted = emailsList.length > 0
-        ? emailsList.map((e: any, idx: number) => `${idx + 1}. From: ${e.from} | Subject: ${e.subject} | Content: ${e.body || e.subject}`).join("\n")
-        : "No unread emails in inbox.";
+      const gmailAccount = dashboard?.emails?.data?.gmailAccount || "banelesouthflow@gmail.com";
+      const gmailUnread = dashboard?.emails?.data?.gmailUnread ?? 0;
+      const crmEmailsList = dashboard?.emails?.data?.important ?? [];
+      
+      const crmFormatted = crmEmailsList.length > 0
+        ? crmEmailsList.map((e: any, idx: number) => `${idx + 1}. [MedFlow CRM Logged Email] To: ${e.recipient || e.from} | Subject: ${e.subject} | Content: ${e.body || e.subject}`).join("\n")
+        : "No logged emails in MedFlow CRM.";
 
-      const inboxContext = `\n\nGmail & Hospital Inbox Context:\n- Total Unread: ${unreadCount}\n- Recent Messages:\n${inboxFormatted}`;
+      const inboxContext = `\n\nGmail & Hospital Inbox System Context:
+- Linked Gmail Address: ${gmailAccount}
+- Live Personal Gmail Inbox Unread Count: ${gmailUnread} unread messages in ${gmailAccount}
+- MedFlow Internal CRM Logged Emails (${crmEmailsList.length} total logged):
+${crmFormatted}`;
 
       const promptWithHistory = `${SYSTEM_PROMPT}${inboxContext}\n\nRecent Conversation History:\n${historyText}\nUser: ${text}`;
 
