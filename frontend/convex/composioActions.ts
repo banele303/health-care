@@ -2,7 +2,6 @@ import { action } from "./_generated/server";
 import { api } from "./_generated/api";
 import { v } from "convex/values";
 import { Composio } from "@composio/core";
-import { requireUser } from "./lib";
 
 export const SERVICES: Record<string, { name: string; description: string; toolkit: string }> = {
   gmail: { name: "Gmail", description: "Read, search, and send real emails via Google OAuth", toolkit: "gmail" },
@@ -22,8 +21,8 @@ function getComposio() {
 export const initiateOAuth = action({
   args: { toolkit: v.string() },
   handler: async (ctx, args) => {
-    const { identity, user } = await requireUser(ctx);
-    const userId = (user?._id ?? identity.subject) as string;
+    const identity = await ctx.auth.getUserIdentity();
+    const userId = identity?.subject ?? "demo-staff-user";
     const toolkit = args.toolkit.toLowerCase();
     const service = SERVICES[toolkit];
 
@@ -72,8 +71,8 @@ export const initiateOAuth = action({
 export const checkOAuthStatus = action({
   args: { toolkit: v.string() },
   handler: async (ctx, args) => {
-    const { identity, user } = await requireUser(ctx);
-    const userId = (user?._id ?? identity.subject) as string;
+    const identity = await ctx.auth.getUserIdentity();
+    const userId = identity?.subject ?? "demo-staff-user";
     const toolkit = args.toolkit.toLowerCase();
 
     try {
@@ -83,7 +82,7 @@ export const checkOAuthStatus = action({
         toolkitSlugs: [toolkit],
       });
 
-      const activeAccount = accounts.items?.find((a: any) => a.status === "ACTIVE");
+      const activeAccount: any = accounts.items?.find((a: any) => a.status === "ACTIVE");
 
       if (activeAccount) {
         const accountEmail = activeAccount.userParams?.email ?? activeAccount.userParams?.username ?? `${toolkit}@google.com`;
@@ -108,8 +107,8 @@ export const executeComposioAction = action({
     params: v.any(),
   },
   handler: async (ctx, { actionName, params }) => {
-    const { identity, user } = await requireUser(ctx);
-    const userId = (user?._id ?? identity.subject) as string;
+    const identity = await ctx.auth.getUserIdentity();
+    const userId = identity?.subject ?? "demo-staff-user";
 
     try {
       const composio = getComposio();

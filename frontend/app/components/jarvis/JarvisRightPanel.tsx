@@ -168,27 +168,6 @@ export function JarvisRightPanel() {
   const calendar = dashboard.calendar?.data;
   const notes = dashboard.notes?.data;
 
-  const handleRunBriefing = async () => {
-    setBriefingLoading(true);
-    try {
-      const res = await runBriefing.mutateAsync({});
-      toast.success("🌅 Clinical Briefing Complete!", { description: res.summary });
-    } catch {
-      toast.error("Failed to generate briefing.");
-    } finally {
-      setBriefingLoading(false);
-    }
-  };
-
-  const handleToggleConn = async (toolkit: string) => {
-    try {
-      await toggleConn.mutateAsync({ toolkit });
-      toast.success(`Service status toggled for ${toolkit}`);
-    } catch {
-      toast.error("Failed to update connection.");
-    }
-  };
-
   const handleRunTool = async (toolName: string, defaultParams: any) => {
     setToolExecuting(true);
     try {
