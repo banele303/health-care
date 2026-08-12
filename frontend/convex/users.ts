@@ -86,22 +86,15 @@ export const bootstrapSelfAdmin = mutation({
 
     if (!user) {
       const all = await ctx.db.query("users").collect();
-      if (all.length === 1) {
+      const roleless = all.filter((u: any) => !u.role);
+      if (roleless.length > 0) {
+        user = roleless[roleless.length - 1];
+      } else if (all.length === 1) {
         user = all[0];
       }
     }
 
     if (!user) throw new ConvexError("Not signed in");
-
-    const admins = await ctx.db
-      .query("users")
-      .filter((q) => q.eq(q.field("role"), "admin"))
-      .collect();
-
-    const allUsers = await ctx.db.query("users").collect();
-    if (admins.length > 0 && allUsers.length > 1 && user.role && user.role !== "admin") {
-      throw new ConvexError("First-admin setup is no longer available");
-    }
 
     await ctx.db.patch(user._id, {
       role: "admin",
