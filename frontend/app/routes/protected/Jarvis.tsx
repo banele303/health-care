@@ -52,7 +52,8 @@ export default function JarvisPage() {
   const setObjective = useMutation(api.jarvisObjective.set);
   const addMemory = useMutation(api.jarvisMemory.upsert);
   const addTodo = useMutation(api.jarvisTodos.add);
-  const voiceState = useQuery(api.jarvisVoiceState.get, {});
+  const voiceStateRes = useQuery(api.jarvisVoiceState.get, {});
+  const voiceState = voiceStateRes?.data;
 
   const [orbState, setOrbStateRaw] = useState<OrbState>("idle");
   const [active, setActive] = useState(false);
@@ -252,9 +253,9 @@ export default function JarvisPage() {
   };
 
   // Mirror tab sync
-  const heartbeatFresh = !!voiceState?.data?.sessionActive && Date.now() - (voiceState?.data?.updatedAt ?? 0) < 25000;
+  const heartbeatFresh = !!voiceState?.sessionActive && Date.now() - (voiceState?.updatedAt ?? 0) < 25000;
   const mirroring = !active && heartbeatFresh;
-  const displayState: OrbState = active ? orbState : mirroring ? (voiceState?.data?.orbState as OrbState ?? "idle") : "idle";
+  const displayState: OrbState = active ? orbState : mirroring ? (voiceState?.orbState as OrbState ?? "idle") : "idle";
 
   return (
     <div className="jarvis-root relative flex h-[calc(100vh-7rem)] overflow-hidden rounded-2xl border border-white/10 shadow-2xl">

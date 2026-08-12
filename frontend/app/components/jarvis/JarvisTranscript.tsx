@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useRef } from "react";
 
 export function JarvisTranscript() {
-  const messages = useQuery(api.jarvisMessages.list, {}) ?? [];
+  const msgsRes = useQuery(api.jarvisMessages.list, {});
+  const messages = msgsRes?.data ?? [];
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

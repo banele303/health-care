@@ -36,10 +36,12 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 export function JarvisLeftPanel() {
-  const facts = useQuery(api.jarvisMemory.list, {}) ?? [];
-  const events = useQuery(api.jarvisTimeline.list, {}) ?? [];
-  const todos = useQuery(api.jarvisTodos.list, {});
-  const objective = useQuery(api.jarvisObjective.get, {});
+  const factsRes = useQuery(api.jarvisMemory.list, {});
+  const facts = factsRes?.data ?? [];
+  const eventsRes = useQuery(api.jarvisTimeline.list, {});
+  const events = eventsRes?.data ?? [];
+  const todos = useQuery(api.jarvisTodos.list, {})?.data;
+  const objective = useQuery(api.jarvisObjective.get, {})?.data;
   const completeTodo = useMutation(api.jarvisTodos.complete);
   const removeTodo = useMutation(api.jarvisTodos.remove);
 
