@@ -95,7 +95,7 @@ function AddLeadModal({ onSuccess }: { onSuccess: () => void }) {
     e.preventDefault();
     setLoading(true);
     try {
-      await createLead.mutate({
+      await createLead.mutateAsync({
         name: form.name,
         email: form.email,
         phone: form.phone || undefined,
@@ -287,7 +287,7 @@ export default function CrmPage() {
 
   const handleStatusChange = async (leadId: any, status: string) => {
     try {
-      await updateLead.mutate({ leadId, status });
+      await updateLead.mutateAsync({ leadId, status });
       toast.success("Status updated.");
     } catch {
       toast.error("Failed to update status.");
@@ -297,7 +297,7 @@ export default function CrmPage() {
   const handleDelete = async (leadId: any) => {
     if (!confirm("Delete this CRM lead?")) return;
     try {
-      await deleteLead.mutate({ leadId });
+      await deleteLead.mutateAsync({ leadId });
       toast.success("Lead deleted.");
     } catch {
       toast.error("Failed to delete lead.");
