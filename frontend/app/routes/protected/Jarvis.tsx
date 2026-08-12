@@ -23,7 +23,10 @@ const SYSTEM_PROMPT = `You are Jarvis, a voice-first AI assistant embedded in Me
 - Task management (use [[TODO:title:priority]])
 - Remembering clinical preferences & facts (use [[MEMORY:category:key:value]])
 
-Be concise, warm, and professional. Output clean text and append directive tags when executing database actions.`;
+CRITICAL CONTEXTUAL RULES:
+- You have multi-turn conversation memory. Always inspect the Recent Conversation History before responding.
+- When the user previously asked to book an appointment, send an email, or triage a patient, and then provides details (such as patient name, age, phone, or notes), IMMEDIATELY execute the corresponding directive (e.g. [[APPOINTMENT:patientName:phone:notes]]).
+- Never reset or respond with generic greetings like "Hello! How can I assist you today?" when answering follow-up details. Confirm the action taken professionally.`;
 
 // ─── Puter AI response parser ─────────────────────────────────────────
 function parseAiDirectives(text: string, addMemory: Function, addTodo: Function, executeTool: Function) {
@@ -72,6 +75,8 @@ export default function JarvisPage() {
   const executeTool = useMutation(api.jarvisTools.executeTool);
   const voiceStateRes = useQuery(api.jarvisVoiceState.get, {});
   const voiceState = voiceStateRes?.data;
+  const messagesRes = useQuery(api.jarvisMessages.list, {});
+  const messages = messagesRes?.data ?? [];
 
   const [orbState, setOrbStateRaw] = useState<OrbState>("idle");
   const [active, setActive] = useState(false);
@@ -163,7 +168,14 @@ export default function JarvisPage() {
       const puter = (window as any).puter;
       if (!puter) throw new Error("Puter.js not available");
 
-      const response = await puter.ai.chat(`${SYSTEM_PROMPT}\n\nUser: ${text}`, {
+      const historyText = (messages ?? [])
+        .slice(-10)
+        .map((m: any) => `${m.role === "user" ? "User" : "Jarvis"}: ${m.text}`)
+        .join("\n");
+
+      const promptWithHistory = `${SYSTEM_PROMPT}\n\nRecent Conversation History:\n${historyText}\nUser: ${text}`;
+
+      const response = await puter.ai.chat(promptWithHistory, {
         model: "gpt-4o-mini",
       });
 
@@ -188,7 +200,7 @@ export default function JarvisPage() {
       void logTimeline.mutateAsync({ kind: "error", label: "Error", detail: errMsg }).catch(() => {});
       setTimeout(() => setOrbState("idle"), 2000);
     }
-  }, [isSpeaking, speak, stopSpeaking, setOrbState, addMessage, logTimeline, setObjective, addMemory, addTodo]);
+  }, [isSpeaking, speak, stopSpeaking, setOrbState, addMessage, logTimeline, setObjective, addMemory, addTodo, executeTool, messages]);
 
   const activate = useCallback(async () => {
     if (active || connecting) return;
