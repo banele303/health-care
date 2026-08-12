@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { JarvisOrb } from "@/components/jarvis/JarvisOrb";
 import { JarvisTranscript } from "@/components/jarvis/JarvisTranscript";
 import { JarvisLeftPanel } from "@/components/jarvis/JarvisLeftPanel";
+import { JarvisRightPanel } from "@/components/jarvis/JarvisRightPanel";
 import { type OrbState, ORB_STATE_HUES } from "@/components/jarvis/jarvisTypes";
 import { Bot, Mic, MicOff, RefreshCw, Trash2, Plus } from "lucide-react";
 
@@ -346,6 +347,11 @@ export default function JarvisPage() {
             </div>
           )}
         </main>
+
+        {/* Right Panel — Workspace, Services, & AI Tools Preview */}
+        <div className="w-full lg:w-80 flex-shrink-0 p-3 lg:p-4 border-t lg:border-t-0 lg:border-l border-white/5 flex flex-col min-h-0">
+          <JarvisRightPanel />
+        </div>
       </div>
     </div>
   );

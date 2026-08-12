@@ -328,6 +328,20 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_user_key", ["userId", "cardKey"]),
 
+  jarvisConnections: defineTable({
+    userId: v.string(),
+    toolkit: v.string(), // gmail | googlecalendar | notion | composio | slack | hospital_crm
+    name: v.string(),
+    status: v.union(v.literal("available"), v.literal("pending_auth"), v.literal("connected"), v.literal("error")),
+    connectedAccountId: v.optional(v.string()),
+    authUrl: v.optional(v.string()),
+    accountLabel: v.optional(v.string()),
+    lastSync: v.optional(v.number()),
+    error: v.optional(v.string()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_toolkit", ["userId", "toolkit"]),
+
   jarvisProfiles: defineTable({
     userId: v.string(),
     displayName: v.optional(v.string()),
