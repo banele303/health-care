@@ -5,8 +5,8 @@ import { requireUser } from "./lib";
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx);
-    const userId = (user as any)._id as string;
+    const { identity, user } = await requireUser(ctx);
+    const userId = (user?._id ?? identity.subject) as string;
     const all = await ctx.db.query("jarvisTodos").withIndex("by_user", q => q.eq("userId", userId)).collect();
     const sorted = all.sort((a, b) => a.createdAt - b.createdAt);
     return {
@@ -23,8 +23,8 @@ export const add = mutation({
     dueAt: v.optional(v.number()),
   },
   handler: async (ctx, { title, priority, dueAt }) => {
-    const user = await requireUser(ctx);
-    const userId = (user as any)._id as string;
+    const { identity, user } = await requireUser(ctx);
+    const userId = (user?._id ?? identity.subject) as string;
     return await ctx.db.insert("jarvisTodos", { userId, title, done: false, priority: priority ?? "medium", dueAt, createdAt: Date.now() });
   },
 });

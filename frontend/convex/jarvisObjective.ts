@@ -5,8 +5,8 @@ import { requireUser } from "./lib";
 export const get = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx);
-    const userId = (user as any)._id as string;
+    const { identity, user } = await requireUser(ctx);
+    const userId = (user?._id ?? identity.subject) as string;
     return await ctx.db.query("jarvisObjective").withIndex("by_user", q => q.eq("userId", userId)).first();
   },
 });
@@ -14,8 +14,8 @@ export const get = query({
 export const set = mutation({
   args: { text: v.string(), state: v.string() },
   handler: async (ctx, { text, state }) => {
-    const user = await requireUser(ctx);
-    const userId = (user as any)._id as string;
+    const { identity, user } = await requireUser(ctx);
+    const userId = (user?._id ?? identity.subject) as string;
     const existing = await ctx.db.query("jarvisObjective").withIndex("by_user", q => q.eq("userId", userId)).first();
     if (existing) {
       await ctx.db.patch(existing._id, { text, state });
@@ -28,8 +28,8 @@ export const set = mutation({
 export const getProfile = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx);
-    const userId = (user as any)._id as string;
+    const { identity, user } = await requireUser(ctx);
+    const userId = (user?._id ?? identity.subject) as string;
     return await ctx.db.query("jarvisProfiles").withIndex("by_user", q => q.eq("userId", userId)).first();
   },
 });
@@ -42,8 +42,8 @@ export const upsertProfile = mutation({
     customInstructions: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx);
-    const userId = (user as any)._id as string;
+    const { identity, user } = await requireUser(ctx);
+    const userId = (user?._id ?? identity.subject) as string;
     const existing = await ctx.db.query("jarvisProfiles").withIndex("by_user", q => q.eq("userId", userId)).first();
     if (existing) {
       await ctx.db.patch(existing._id, args);

@@ -5,8 +5,8 @@ import { requireUser } from "./lib";
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx);
-    const userId = (user as any)._id as string;
+    const { identity, user } = await requireUser(ctx);
+    const userId = (user?._id ?? identity.subject) as string;
     return await ctx.db
       .query("jarvisMemory")
       .withIndex("by_user", q => q.eq("userId", userId))
@@ -17,8 +17,8 @@ export const list = query({
 export const upsert = mutation({
   args: { key: v.string(), value: v.string(), category: v.string() },
   handler: async (ctx, { key, value, category }) => {
-    const user = await requireUser(ctx);
-    const userId = (user as any)._id as string;
+    const { identity, user } = await requireUser(ctx);
+    const userId = (user?._id ?? identity.subject) as string;
     const existing = await ctx.db
       .query("jarvisMemory")
       .withIndex("by_user_key", q => q.eq("userId", userId).eq("key", key))

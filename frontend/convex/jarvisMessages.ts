@@ -7,8 +7,8 @@ import { requireUser } from "./lib";
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx);
-    const userId = (user as any)._id as string;
+    const { identity, user } = await requireUser(ctx);
+    const userId = (user?._id ?? identity.subject) as string;
     return await ctx.db
       .query("jarvisMessages")
       .withIndex("by_user", q => q.eq("userId", userId))
@@ -20,8 +20,8 @@ export const list = query({
 export const upsertStreaming = mutation({
   args: { itemId: v.string(), role: v.union(v.literal("user"), v.literal("assistant")), text: v.string() },
   handler: async (ctx, { itemId, role, text }) => {
-    const user = await requireUser(ctx);
-    const userId = (user as any)._id as string;
+    const { identity, user } = await requireUser(ctx);
+    const userId = (user?._id ?? identity.subject) as string;
     const existing = await ctx.db
       .query("jarvisMessages")
       .withIndex("by_user", q => q.eq("userId", userId))
@@ -43,8 +43,8 @@ export const finalize = mutation({
     interrupted: v.optional(v.boolean()),
   },
   handler: async (ctx, { itemId, role, text, interrupted }) => {
-    const user = await requireUser(ctx);
-    const userId = (user as any)._id as string;
+    const { identity, user } = await requireUser(ctx);
+    const userId = (user?._id ?? identity.subject) as string;
     const existing = await ctx.db
       .query("jarvisMessages")
       .withIndex("by_user", q => q.eq("userId", userId))
@@ -61,8 +61,8 @@ export const finalize = mutation({
 export const addMessage = mutation({
   args: { role: v.union(v.literal("user"), v.literal("assistant")), text: v.string() },
   handler: async (ctx, { role, text }) => {
-    const user = await requireUser(ctx);
-    const userId = (user as any)._id as string;
+    const { identity, user } = await requireUser(ctx);
+    const userId = (user?._id ?? identity.subject) as string;
     return await ctx.db.insert("jarvisMessages", { userId, role, text, final: true });
   },
 });
@@ -70,8 +70,8 @@ export const addMessage = mutation({
 export const clearAll = mutation({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx);
-    const userId = (user as any)._id as string;
+    const { identity, user } = await requireUser(ctx);
+    const userId = (user?._id ?? identity.subject) as string;
     const msgs = await ctx.db.query("jarvisMessages").withIndex("by_user", q => q.eq("userId", userId)).collect();
     await Promise.all(msgs.map(m => ctx.db.delete(m._id)));
   },

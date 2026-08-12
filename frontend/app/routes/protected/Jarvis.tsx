@@ -263,10 +263,10 @@ export default function JarvisPage() {
       <div className="jarvis-scene absolute inset-0 pointer-events-none" />
       <div className="jarvis-scene-grid absolute inset-0 pointer-events-none" />
 
-      {/* Layout: Left panel | Center | Right */}
-      <div className="relative z-10 flex h-full w-full">
+      {/* Layout: Left panel | Center */}
+      <div className="relative z-10 flex h-full w-full flex-col lg:flex-row">
         {/* Left Panel */}
-        <div className="w-72 flex-shrink-0 p-4 border-r border-white/5 flex flex-col min-h-0">
+        <div className="w-full lg:w-72 flex-shrink-0 p-3 lg:p-4 border-b lg:border-b-0 lg:border-r border-white/5 flex flex-col min-h-0 hidden md:flex">
           <JarvisLeftPanel />
         </div>
 

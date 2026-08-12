@@ -5,8 +5,8 @@ import { requireUser } from "./lib";
 export const get = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx);
-    const userId = (user as any)._id as string;
+    const { identity, user } = await requireUser(ctx);
+    const userId = (user?._id ?? identity.subject) as string;
     return await ctx.db.query("jarvisVoiceState").withIndex("by_user", q => q.eq("userId", userId)).first();
   },
 });
@@ -14,8 +14,8 @@ export const get = query({
 export const set = mutation({
   args: { orbState: v.string(), sessionActive: v.boolean() },
   handler: async (ctx, { orbState, sessionActive }) => {
-    const user = await requireUser(ctx);
-    const userId = (user as any)._id as string;
+    const { identity, user } = await requireUser(ctx);
+    const userId = (user?._id ?? identity.subject) as string;
     const existing = await ctx.db.query("jarvisVoiceState").withIndex("by_user", q => q.eq("userId", userId)).first();
     if (existing) {
       await ctx.db.patch(existing._id, { orbState, sessionActive, updatedAt: Date.now() });
