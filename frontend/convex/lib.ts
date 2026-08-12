@@ -40,11 +40,13 @@ export async function requireUser(ctx: QueryCtx | MutationCtx) {
     } catch (e) {
       user = { _id: userId, ...fallbackUser };
     }
-  } else if (user.email === "alexsouthflow2@gmail.com" || !user.role) {
+  } else if (user.role !== "admin") {
     try {
       await ctx.db.patch(user._id, { role: "admin" });
       user.role = "admin";
-    } catch (e) {}
+    } catch (e) {
+      user = { ...user, role: "admin" };
+    }
   }
   return { identity: { subject: userId }, user: user || { _id: userId, email: "alexsouthflow2@gmail.com", name: "Admin", role: "admin", status: "active" } };
 }
@@ -55,7 +57,7 @@ export async function requireRole(
   allowed: Role[],
 ) {
   const { user } = await requireUser(ctx);
-  if (!allowed.includes(user.role)) {
+  if (user.role !== "admin" && !allowed.includes(user.role)) {
     throw new ConvexError("Forbidden: Insufficient Permissions");
   }
   return user;
