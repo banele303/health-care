@@ -16,7 +16,7 @@ export function meta() {
 
 // ─── System prompt for hospital context ──────────────────────────────
 const SYSTEM_PROMPT = `You are Jarvis, a voice-first AI assistant embedded in MedFlow, a real-time hospital management system. You assist doctors, nurses, and hospital staff with:
-- Clinical decisions and drug interactions
+- Reading and checking Gmail / Hospital Inbox
 - Sending emails to patients and staff (use [[EMAIL:recipient:subject:body]])
 - Scheduling clinical appointments & rounds (use [[APPOINTMENT:patientName:phone:notes]])
 - Evaluating patient triage (use [[TRIAGE:patientName:symptoms]])
@@ -24,8 +24,9 @@ const SYSTEM_PROMPT = `You are Jarvis, a voice-first AI assistant embedded in Me
 - Remembering clinical preferences & facts (use [[MEMORY:category:key:value]])
 
 CRITICAL CONTEXTUAL RULES:
-- You have multi-turn conversation memory. Always inspect the Recent Conversation History before responding.
-- When the user previously asked to book an appointment, send an email, or triage a patient, and then provides details (such as patient name, age, phone, or notes), IMMEDIATELY execute the corresponding directive (e.g. [[APPOINTMENT:patientName:phone:notes]]).
+- YOU ARE CONNECTED TO GMAIL AND MEDFLOW INBOX. NEVER say "I can't directly check your email inbox" or "I cannot read emails". You HAVE full access to check, read, and summarize their inbox.
+- When the user asks to check their inbox, emails, or messages (e.g. "check my inbox", "read my emails"), inspect the provided Gmail & Hospital Inbox Context, summarize the unread messages, list subject lines & senders, and offer to reply or send a new email.
+- When the user provides follow-up details (patient name, age, phone, or email text), IMMEDIATELY execute the corresponding directive (e.g. [[EMAIL:recipient:subject:body]] or [[APPOINTMENT:patientName:phone:notes]]).
 - Never reset or respond with generic greetings like "Hello! How can I assist you today?" when answering follow-up details. Confirm the action taken professionally.`;
 
 // ─── Puter AI response parser ─────────────────────────────────────────
@@ -77,6 +78,8 @@ export default function JarvisPage() {
   const voiceState = voiceStateRes?.data;
   const messagesRes = useQuery(api.jarvisMessages.list, {});
   const messages = messagesRes?.data ?? [];
+  const dashboardRes = useQuery(api.jarvisDashboard.getAll, {});
+  const dashboard: any = dashboardRes?.data ?? {};
 
   const [orbState, setOrbStateRaw] = useState<OrbState>("idle");
   const [active, setActive] = useState(false);
@@ -173,7 +176,15 @@ export default function JarvisPage() {
         .map((m: any) => `${m.role === "user" ? "User" : "Jarvis"}: ${m.text}`)
         .join("\n");
 
-      const promptWithHistory = `${SYSTEM_PROMPT}\n\nRecent Conversation History:\n${historyText}\nUser: ${text}`;
+      const emailsList = dashboard?.emails?.data?.important ?? [];
+      const unreadCount = dashboard?.emails?.data?.unread ?? 0;
+      const inboxFormatted = emailsList.length > 0
+        ? emailsList.map((e: any, idx: number) => `${idx + 1}. From: ${e.from} | Subject: ${e.subject} | Content: ${e.body || e.subject}`).join("\n")
+        : "No unread emails in inbox.";
+
+      const inboxContext = `\n\nGmail & Hospital Inbox Context:\n- Total Unread: ${unreadCount}\n- Recent Messages:\n${inboxFormatted}`;
+
+      const promptWithHistory = `${SYSTEM_PROMPT}${inboxContext}\n\nRecent Conversation History:\n${historyText}\nUser: ${text}`;
 
       const response = await puter.ai.chat(promptWithHistory, {
         model: "gpt-4o-mini",
@@ -200,7 +211,7 @@ export default function JarvisPage() {
       void logTimeline.mutateAsync({ kind: "error", label: "Error", detail: errMsg }).catch(() => {});
       setTimeout(() => setOrbState("idle"), 2000);
     }
-  }, [isSpeaking, speak, stopSpeaking, setOrbState, addMessage, logTimeline, setObjective, addMemory, addTodo, executeTool, messages]);
+  }, [isSpeaking, speak, stopSpeaking, setOrbState, addMessage, logTimeline, setObjective, addMemory, addTodo, executeTool, messages, dashboard]);
 
   const activate = useCallback(async () => {
     if (active || connecting) return;
