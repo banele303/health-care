@@ -43,7 +43,7 @@ export function JarvisRightPanel() {
   const updateConnLabel = useMutation(api.jarvisConnections.updateAccountLabel);
   const executeTool = useMutation(api.jarvisTools.executeTool);
   const savePreceptorship = useMutation(api.jarvisPreceptorship.saveSession);
-  const initiateOAuthAction = useAction(api.composioActions.initiateOAuth);
+  const initiateOAuthAction = useAction((api as any).composioActions.initiateOAuth);
 
   const [activeTab, setActiveTab] = useState<"workspace" | "services" | "tools" | "scribe">("workspace");
   const [briefingLoading, setBriefingLoading] = useState(false);
