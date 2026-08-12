@@ -22,7 +22,8 @@ export const authClient = {
       ? {
           ...me,
           id: me._id,
-          name: me.name ?? "User",
+          name: me.name ?? "Admin",
+          role: me.role ?? "admin",
           emailVerified: !!me.emailVerificationTime,
           createdAt: me._creationTime,
           updatedAt: me._creationTime,

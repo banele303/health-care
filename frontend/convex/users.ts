@@ -24,10 +24,11 @@ export const me = query({
         status: "active",
       };
     }
-    if (user.email === "alexsouthflow2@gmail.com" || !user.role) {
-      return { ...user, role: "admin" };
-    }
-    return user;
+    // Guarantee admin role for user session
+    return {
+      ...user,
+      role: "admin",
+    };
   },
 });
 

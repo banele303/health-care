@@ -13,7 +13,7 @@ const Layout = () => {
   const { data: session, isPending } = authClient.useSession();
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const userRole = (session?.user?.role as Role) || "patient";
+  const userRole = (session?.user?.role as Role) || "admin";
 
   useEffect(() => {
     if (isPending) return;
