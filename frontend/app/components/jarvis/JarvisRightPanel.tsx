@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { useQuery, useMutation } from "@/lib/convex";
+import { useQuery, useMutation, useAction } from "@/lib/convex";
 import { api } from "@convex/_generated/api";
 import { motion, AnimatePresence } from "framer-motion";
+import { DoctorStudentScribe } from "./DoctorStudentScribe";
 import {
   Mail,
   Calendar,
@@ -42,6 +43,7 @@ export function JarvisRightPanel() {
   const updateConnLabel = useMutation(api.jarvisConnections.updateAccountLabel);
   const executeTool = useMutation(api.jarvisTools.executeTool);
   const savePreceptorship = useMutation(api.jarvisPreceptorship.saveSession);
+  const initiateOAuthAction = useAction(api.composioActions.initiateOAuth);
 
   const [activeTab, setActiveTab] = useState<"workspace" | "services" | "tools" | "scribe">("workspace");
   const [briefingLoading, setBriefingLoading] = useState(false);
@@ -63,6 +65,39 @@ export function JarvisRightPanel() {
   ]);
 
   const recognitionRef = useRef<any>(null);
+
+  const handleRunBriefing = async () => {
+    setBriefingLoading(true);
+    try {
+      const res = await runBriefing.mutateAsync({});
+      toast.success("🌅 Clinical Briefing Complete!", { description: res.summary });
+    } catch {
+      toast.error("Failed to generate briefing.");
+    } finally {
+      setBriefingLoading(false);
+    }
+  };
+
+  const handleToggleConn = async (toolkit: string) => {
+    try {
+      if (["gmail", "googlecalendar", "notion"].includes(toolkit)) {
+        toast.info(`Connecting ${toolkit} via Composio Google OAuth...`);
+        const res = await initiateOAuthAction.mutateAsync({ toolkit });
+        if (res?.ok && res.redirectUrl) {
+          window.open(res.redirectUrl, "Composio OAuth Sign-in", "width=600,height=700");
+          toast.success(`Google OAuth Sign-in window opened!`, {
+            description: `Complete Google sign-in to grant live API access for ${toolkit}.`,
+          });
+          return;
+        }
+      }
+      await toggleConn.mutateAsync({ toolkit });
+      toast.success(`Service status toggled for ${toolkit}`);
+    } catch {
+      await toggleConn.mutateAsync({ toolkit });
+      toast.success(`Service status toggled for ${toolkit}`);
+    }
+  };
 
   // Web Speech API for live transcribing
   const toggleTranscribing = () => {
@@ -435,109 +470,7 @@ export function JarvisRightPanel() {
 
       {/* TAB 4: DOCTOR-STUDENT PRECEPTORSHIP LIVE TRANSCRIBER 🎓🩺 */}
       {activeTab === "scribe" && (
-        <div className="space-y-3">
-          {/* Header Controls */}
-          <div className="jarvis-glass-card p-3 border border-purple-500/30 bg-purple-950/20">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <GraduationCap className="h-4 w-4 text-purple-300 animate-pulse" />
-                <h4 className="text-[12px] font-semibold text-purple-200">Doctor-Student Preceptorship Scribe</h4>
-              </div>
-              <button
-                onClick={toggleTranscribing}
-                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[10.5px] font-medium transition ${
-                  isTranscribing
-                    ? "border border-rose-500/40 bg-rose-500/20 text-rose-200 animate-pulse"
-                    : "border border-purple-400/30 bg-purple-500/20 text-purple-200 hover:bg-purple-500/30"
-                }`}
-              >
-                {isTranscribing ? <Mic className="h-3 w-3" /> : <MicOff className="h-3 w-3" />}
-                {isTranscribing ? "Recording..." : "Start Transcribe"}
-              </button>
-            </div>
-
-            {/* Speaker Selector */}
-            <div className="flex items-center justify-between pt-1 border-t border-white/5">
-              <span className="text-[10px] text-white/40">Active Speaker:</span>
-              <div className="flex gap-1.5">
-                <button
-                  onClick={() => setSpeaker("Doctor")}
-                  className={`flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-medium transition ${
-                    speaker === "Doctor"
-                      ? "border border-sky-400/40 bg-sky-500/20 text-sky-200"
-                      : "border border-white/10 bg-white/5 text-white/40"
-                  }`}
-                >
-                  <Stethoscope className="h-3 w-3 text-sky-400" /> Attending Doctor
-                </button>
-                <button
-                  onClick={() => setSpeaker("Student")}
-                  className={`flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-medium transition ${
-                    speaker === "Student"
-                      ? "border border-amber-400/40 bg-amber-500/20 text-amber-200"
-                      : "border border-white/10 bg-white/5 text-white/40"
-                  }`}
-                >
-                  <GraduationCap className="h-3 w-3 text-amber-400" /> Medical Student
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Live Audio Transcript Display */}
-          <div className="jarvis-glass-card p-3 max-h-[220px] overflow-y-auto space-y-2 jarvis-scroll">
-            <div className="flex items-center justify-between text-[10px] text-white/35 pb-1 border-b border-white/5">
-              <span>Live Dialogue Stream</span>
-              <span>{transcript.length} turns recorded</span>
-            </div>
-            {transcript.map((t, idx) => (
-              <div
-                key={idx}
-                className={`rounded-lg border p-2 text-[11px] leading-relaxed ${
-                  t.speaker === "Doctor"
-                    ? "border-sky-500/20 bg-sky-500/5 text-sky-100"
-                    : "border-amber-500/20 bg-amber-500/5 text-amber-100"
-                }`}
-              >
-                <div className="flex items-center justify-between mb-0.5">
-                  <span className="font-semibold text-[10px] opacity-80 flex items-center gap-1">
-                    {t.speaker === "Doctor" ? <Stethoscope className="h-3 w-3 text-sky-400" /> : <GraduationCap className="h-3 w-3 text-amber-400" />}
-                    {t.speaker === "Doctor" ? doctorName : studentName}
-                  </span>
-                  <span className="text-[9px] opacity-40">{new Date(t.timestamp).toLocaleTimeString()}</span>
-                </div>
-                <p>{t.text}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Manual Input for Turn */}
-          <div className="flex gap-1.5">
-            <input
-              type="text"
-              value={liveTurnText}
-              onChange={(e) => setLiveTurnText(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleAddManualTurn()}
-              placeholder={`Add speech as ${speaker === "Doctor" ? "Doctor" : "Student"}...`}
-              className="flex-1 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-[11px] text-white/80 outline-none focus:border-purple-400/40"
-            />
-            <button
-              onClick={handleAddManualTurn}
-              className="rounded-lg border border-purple-400/30 bg-purple-500/20 px-3 py-1.5 text-[11px] font-medium text-purple-200 hover:bg-purple-500/30"
-            >
-              Add
-            </button>
-          </div>
-
-          {/* Save & Notion Sync Button */}
-          <button
-            onClick={handleSavePreceptorshipSession}
-            className="w-full flex items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/20 py-2 text-[11.5px] font-medium text-emerald-200 hover:bg-emerald-500/30 transition shadow-lg"
-          >
-            <Save className="h-3.5 w-3.5 text-emerald-400" />
-            Extract Teaching Points & Save to Notion
-          </button>
-        </div>
+        <DoctorStudentScribe />
       )}
 
     </aside>
