@@ -78,8 +78,8 @@ export function RevenueChart() {
     );
   if (isError)
     return (
-      <div className="h-75 flex items-center justify-center text-red-500">
-        Error loading chart
+      <div className="h-75 flex flex-col items-center justify-center text-slate-400 text-xs italic">
+        <p>No revenue data available yet.</p>
       </div>
     );
   return (

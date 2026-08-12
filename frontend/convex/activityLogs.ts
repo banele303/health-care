@@ -5,7 +5,7 @@ import { paginate, requireRole, requireUser } from "./lib";
 export const list = query({
   args: { page: v.optional(v.number()), limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
-    await requireRole(ctx, ["admin"]);
+    await requireUser(ctx);
     const page = Math.max(1, args.page ?? 1);
     const limit = Math.max(1, args.limit ?? 10);
 

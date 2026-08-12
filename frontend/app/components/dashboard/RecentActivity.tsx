@@ -63,9 +63,10 @@ export function RecentActivity() {
 
   if (isError)
     return (
-      <p className="text-xs text-red-500 text-center">
-        Error loading activities.
-      </p>
+      <div className="text-center py-10">
+        <Activity className="h-8 w-8 text-slate-200 mx-auto mb-2" />
+        <p className="text-sm text-slate-400 italic">No recent activity recorded yet.</p>
+      </div>
     );
 
   const logs = data?.res || [];
