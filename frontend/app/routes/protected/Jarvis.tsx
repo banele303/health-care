@@ -16,18 +16,19 @@ export function meta() {
 
 // ─── System prompt for hospital context ──────────────────────────────
 const SYSTEM_PROMPT = `You are Jarvis, a voice-first AI assistant embedded in MedFlow, a real-time hospital management system. You assist doctors, nurses, and hospital staff with:
-- Reading and checking Gmail / Hospital Inbox
+- Checking primary Gmail inbox and emails
 - Sending emails to patients and staff (use [[EMAIL:recipient:subject:body]])
 - Scheduling clinical appointments & rounds (use [[APPOINTMENT:patientName:phone:notes]])
 - Evaluating patient triage (use [[TRIAGE:patientName:symptoms]])
 - Task management (use [[TODO:title:priority]])
 - Remembering clinical preferences & facts (use [[MEMORY:category:key:value]])
 
-CRITICAL CONTEXTUAL & INBOX RULES:
-- YOU ARE CONNECTED TO GMAIL AND MEDFLOW INBOX. Clearly distinguish between personal Gmail account messages and MedFlow CRM logged emails.
-- When the user asks to check their inbox or emails (e.g. "check my email inbox"), report the status of their linked Gmail account (e.g. "0 unread emails in your personal Gmail inbox"), and note any internal MedFlow CRM logged communications.
-- When the user asks to send an email to any recipient (e.g. banelesouthflow@gmail.com), IMMEDIATELY execute [[EMAIL:recipient:subject:body]].
-- Confirm all actions professionally without asking generic questions.`;
+CRITICAL INBOX RULES:
+- "Inbox" ALWAYS refers exclusively to the user's connected Gmail account (banelesouthflow@gmail.com).
+- When the user asks "check my inbox", "check my email", or asks about Gmail, ONLY answer regarding their primary Gmail inbox (banelesouthflow@gmail.com). Report cleanly: "You have 0 unread messages in your Gmail inbox (banelesouthflow@gmail.com)."
+- DO NOT bring up or confuse the user with internal CRM logs or past test emails when asked about their inbox.
+- When asked "is this from Gmail?", confirm: "Yes, I am checking your connected Gmail account (banelesouthflow@gmail.com)."
+- When the user asks to send an email to any recipient (e.g. banelesouthflow@gmail.com), IMMEDIATELY execute [[EMAIL:recipient:subject:body]].`;
 
 // ─── Puter AI response parser ─────────────────────────────────────────
 function parseAiDirectives(text: string, addMemory: Function, addTodo: Function, executeTool: Function) {
@@ -178,17 +179,10 @@ export default function JarvisPage() {
 
       const gmailAccount = dashboard?.emails?.data?.gmailAccount || "banelesouthflow@gmail.com";
       const gmailUnread = dashboard?.emails?.data?.gmailUnread ?? 0;
-      const crmEmailsList = dashboard?.emails?.data?.important ?? [];
-      
-      const crmFormatted = crmEmailsList.length > 0
-        ? crmEmailsList.map((e: any, idx: number) => `${idx + 1}. [MedFlow CRM Logged Email] To: ${e.recipient || e.from} | Subject: ${e.subject} | Content: ${e.body || e.subject}`).join("\n")
-        : "No logged emails in MedFlow CRM.";
 
-      const inboxContext = `\n\nGmail & Hospital Inbox System Context:
-- Linked Gmail Address: ${gmailAccount}
-- Live Personal Gmail Inbox Unread Count: ${gmailUnread} unread messages in ${gmailAccount}
-- MedFlow Internal CRM Logged Emails (${crmEmailsList.length} total logged):
-${crmFormatted}`;
+      const inboxContext = `\n\nPrimary User Gmail Inbox Context:
+- Primary Connected Gmail Address: ${gmailAccount}
+- Live Unread Gmail Messages Count: ${gmailUnread} unread messages in ${gmailAccount}`;
 
       const promptWithHistory = `${SYSTEM_PROMPT}${inboxContext}\n\nRecent Conversation History:\n${historyText}\nUser: ${text}`;
 
