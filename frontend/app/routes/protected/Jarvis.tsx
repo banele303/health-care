@@ -376,7 +376,7 @@ export default function JarvisPage() {
         </main>
 
         {/* Right Panel — Workspace, Services, & AI Tools Preview */}
-        <div className="w-full lg:w-80 flex-shrink-0 p-3 lg:p-4 border-t lg:border-t-0 lg:border-l border-white/5 flex flex-col min-h-0">
+        <div className="w-full lg:w-80 xl:w-96 flex-shrink-0 p-2.5 lg:p-3 border-t lg:border-t-0 lg:border-l border-white/5 flex flex-col min-h-0">
           <JarvisRightPanel />
         </div>
       </div>
