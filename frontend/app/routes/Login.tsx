@@ -72,15 +72,12 @@ const Login = () => {
     setIsLoading(true);
     try {
       if (isFirstRun || isSignUpMode) {
-        // Create the administrator account.
+        // Create the administrator account directly with admin role
         await signIn("password", {
           email: data.email,
           password: data.password,
-          flow: "signUp",
-        });
-        
-        await convex.mutation(api.users.bootstrapSelfAdmin, {
           name: adminName || "Admin",
+          flow: "signUp",
         });
         toast.success("Admin account created. Welcome to MedFlow!");
       } else {
