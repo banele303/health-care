@@ -451,7 +451,7 @@ export default function MessagingPage() {
         {/* Current user */}
         <div className="p-3 border-t border-white/5 flex items-center gap-2">
           <div className={`h-7 w-7 rounded-full flex items-center justify-center text-white text-xs font-bold ${ROLE_COLORS[userRole] ?? "bg-gray-500"}`}>
-            {userName.split(" ").map(n => n[0]).join("").slice(0, 2)}
+            {userName.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium truncate">{userName}</p>
