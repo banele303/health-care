@@ -17,6 +17,7 @@ export function meta() {
 // ─── System prompt for hospital context ──────────────────────────────
 const SYSTEM_PROMPT = `You are Jarvis, a voice-first AI assistant embedded in MedFlow, a real-time hospital management system. You assist doctors, nurses, and hospital staff with:
 - Checking primary Gmail inbox and emails
+- Updating connected Gmail account (use [[UPDATE_EMAIL:newEmail]])
 - Sending emails to patients and staff (use [[EMAIL:recipient:subject:body]])
 - Scheduling clinical appointments & rounds (use [[APPOINTMENT:patientName:phone:notes]])
 - Evaluating patient triage (use [[TRIAGE:patientName:symptoms]])
@@ -24,14 +25,14 @@ const SYSTEM_PROMPT = `You are Jarvis, a voice-first AI assistant embedded in Me
 - Remembering clinical preferences & facts (use [[MEMORY:category:key:value]])
 
 CRITICAL INBOX RULES:
-- "Inbox" ALWAYS refers exclusively to the user's connected Gmail account (banelesouthflow@gmail.com).
-- When the user asks "check my inbox", "check my email", or asks about Gmail, ONLY answer regarding their primary Gmail inbox (banelesouthflow@gmail.com). Report cleanly: "You have 0 unread messages in your Gmail inbox (banelesouthflow@gmail.com)."
+- "Inbox" ALWAYS refers exclusively to the user's active connected Gmail account.
+- When the user says "my connected email should be X" or "change my email to X", IMMEDIATELY output [[UPDATE_EMAIL:X]] and confirm that your connected Gmail account has been updated to X.
+- When the user asks "check my inbox", "check my email", or asks about Gmail, ONLY answer regarding their active connected Gmail address. Report cleanly: "You have 0 unread messages in your Gmail inbox (connected address)."
 - DO NOT bring up or confuse the user with internal CRM logs or past test emails when asked about their inbox.
-- When asked "is this from Gmail?", confirm: "Yes, I am checking your connected Gmail account (banelesouthflow@gmail.com)."
-- When the user asks to send an email to any recipient (e.g. banelesouthflow@gmail.com), IMMEDIATELY execute [[EMAIL:recipient:subject:body]].`;
+- When the user asks to send an email to any recipient, IMMEDIATELY execute [[EMAIL:recipient:subject:body]].`;
 
 // ─── Puter AI response parser ─────────────────────────────────────────
-function parseAiDirectives(text: string, addMemory: Function, addTodo: Function, executeTool: Function) {
+function parseAiDirectives(text: string, addMemory: Function, addTodo: Function, executeTool: Function, updateAccountLabel: Function) {
   const memoryMatches = [...text.matchAll(/\[\[MEMORY:([^:]+):([^:]+):([^\]]+)\]\]/g)];
   for (const m of memoryMatches) {
     addMemory({ category: m[1], key: m[2], value: m[3] }).catch(() => {});
@@ -52,6 +53,10 @@ function parseAiDirectives(text: string, addMemory: Function, addTodo: Function,
   for (const tr of triageMatches) {
     executeTool({ toolName: "triage_patient", params: { patientName: tr[1], symptoms: tr[2] } }).catch(() => {});
   }
+  const updateEmailMatches = [...text.matchAll(/\[\[UPDATE_EMAIL:([^\]]+)\]\]/g)];
+  for (const ue of updateEmailMatches) {
+    updateAccountLabel({ toolkit: "gmail", accountLabel: ue[1].trim() }).catch(() => {});
+  }
   // Return clean text without directives
   return text
     .replace(/\[\[MEMORY:[^\]]+\]\]/g, "")
@@ -59,6 +64,7 @@ function parseAiDirectives(text: string, addMemory: Function, addTodo: Function,
     .replace(/\[\[EMAIL:[^\]]+\]\]/g, "")
     .replace(/\[\[APPOINTMENT:[^\]]+\]\]/g, "")
     .replace(/\[\[TRIAGE:[^\]]+\]\]/g, "")
+    .replace(/\[\[UPDATE_EMAIL:[^\]]+\]\]/g, "")
     .trim();
 }
 
@@ -75,6 +81,7 @@ export default function JarvisPage() {
   const addMemory = useMutation(api.jarvisMemory.upsert);
   const addTodo = useMutation(api.jarvisTodos.add);
   const executeTool = useMutation(api.jarvisTools.executeTool);
+  const updateAccountLabel = useMutation(api.jarvisConnections.updateAccountLabel);
   const voiceStateRes = useQuery(api.jarvisVoiceState.get, {});
   const voiceState = voiceStateRes?.data;
   const messagesRes = useQuery(api.jarvisMessages.list, {});
@@ -177,11 +184,11 @@ export default function JarvisPage() {
         .map((m: any) => `${m.role === "user" ? "User" : "Jarvis"}: ${m.text}`)
         .join("\n");
 
-      const gmailAccount = dashboard?.emails?.data?.gmailAccount || "banelesouthflow@gmail.com";
+      const gmailAccount = dashboard?.emails?.data?.gmailAccount || "alexsouthflow2@gmail.com";
       const gmailUnread = dashboard?.emails?.data?.gmailUnread ?? 0;
 
       const inboxContext = `\n\nPrimary User Gmail Inbox Context:
-- Primary Connected Gmail Address: ${gmailAccount}
+- Active Connected Gmail Address: ${gmailAccount}
 - Live Unread Gmail Messages Count: ${gmailUnread} unread messages in ${gmailAccount}`;
 
       const promptWithHistory = `${SYSTEM_PROMPT}${inboxContext}\n\nRecent Conversation History:\n${historyText}\nUser: ${text}`;
@@ -194,8 +201,8 @@ export default function JarvisPage() {
         ? response
         : response?.message?.content ?? response?.text ?? "I'm sorry, I couldn't process that.";
 
-      // Parse and store directives (memory, todos, email, appt, triage)
-      const cleanText = parseAiDirectives(rawText, addMemory.mutateAsync, addTodo.mutateAsync, executeTool.mutateAsync);
+      // Parse and store directives (memory, todos, email, appt, triage, update_email)
+      const cleanText = parseAiDirectives(rawText, addMemory.mutateAsync, addTodo.mutateAsync, executeTool.mutateAsync, updateAccountLabel.mutateAsync);
 
       await addMessage.mutateAsync({ role: "assistant", text: cleanText });
       void logTimeline.mutateAsync({ kind: "response_generated", label: "Response generated", detail: cleanText.slice(0, 80) }).catch(() => {});
@@ -211,7 +218,7 @@ export default function JarvisPage() {
       void logTimeline.mutateAsync({ kind: "error", label: "Error", detail: errMsg }).catch(() => {});
       setTimeout(() => setOrbState("idle"), 2000);
     }
-  }, [isSpeaking, speak, stopSpeaking, setOrbState, addMessage, logTimeline, setObjective, addMemory, addTodo, executeTool, messages, dashboard]);
+  }, [isSpeaking, speak, stopSpeaking, setOrbState, addMessage, logTimeline, setObjective, addMemory, addTodo, executeTool, updateAccountLabel, messages, dashboard]);
 
   const activate = useCallback(async () => {
     if (active || connecting) return;

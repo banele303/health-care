@@ -16,7 +16,7 @@ export const getAll = query({
 
     const linkedGmailAddress = gmailConn?.accountLabel?.includes("@")
       ? gmailConn.accountLabel
-      : "banelesouthflow@gmail.com";
+      : "alexsouthflow2@gmail.com";
 
     // 2. Fetch internal CRM communications
     const comms = await ctx.db.query("crmCommunications").order("desc").collect();

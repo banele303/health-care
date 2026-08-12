@@ -3,7 +3,7 @@ import { query, mutation } from "./_generated/server";
 import { requireUser } from "./lib";
 
 const DEFAULT_CONNECTIONS = [
-  { toolkit: "gmail", name: "Gmail / Email", status: "connected", accountLabel: "hospital.staff@medflow.org", lastSync: Date.now() - 5 * 60 * 1000 },
+  { toolkit: "gmail", name: "Gmail / Email", status: "connected", accountLabel: "alexsouthflow2@gmail.com", lastSync: Date.now() - 5 * 60 * 1000 },
   { toolkit: "googlecalendar", name: "Google Calendar", status: "connected", accountLabel: "dr.admin@medflow.org", lastSync: Date.now() - 12 * 60 * 1000 },
   { toolkit: "notion", name: "Notion Clinical Notes", status: "connected", accountLabel: "MedFlow Clinical Workspace", lastSync: Date.now() - 25 * 60 * 1000 },
   { toolkit: "composio", name: "Composio AI Tool Engine", status: "connected", accountLabel: "Active (20+ AI Tools)", lastSync: Date.now() - 2 * 60 * 1000 },
