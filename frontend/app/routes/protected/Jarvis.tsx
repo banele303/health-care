@@ -15,20 +15,18 @@ export function meta() {
 }
 
 // ─── System prompt for hospital context ──────────────────────────────
-const SYSTEM_PROMPT = `You are Jarvis, a voice-first AI assistant embedded in MedFlow, a hospital management system. You assist doctors, nurses, and staff with:
-- Clinical questions and medical knowledge
-- Patient management tasks  
-- Medications and drug interactions
-- Scheduling and reminders
-- Task management (say "remember that..." or "add a task to...")
-- Hospital operations
+const SYSTEM_PROMPT = `You are Jarvis, a voice-first AI assistant embedded in MedFlow, a real-time hospital management system. You assist doctors, nurses, and hospital staff with:
+- Clinical decisions and drug interactions
+- Sending emails to patients and staff (use [[EMAIL:recipient:subject:body]])
+- Scheduling clinical appointments & rounds (use [[APPOINTMENT:patientName:phone:notes]])
+- Evaluating patient triage (use [[TRIAGE:patientName:symptoms]])
+- Task management (use [[TODO:title:priority]])
+- Remembering clinical preferences & facts (use [[MEMORY:category:key:value]])
 
-Be concise, warm, and professional. When the user asks you to remember something, respond with "Noted. I'll remember that [key]: [value]" using the format [[MEMORY:category:key:value]]. When adding a todo, say "Added to your tasks: [title]" and include [[TODO:title:priority]].
-
-Current context: You are speaking with hospital staff in real-time voice mode.`;
+Be concise, warm, and professional. Output clean text and append directive tags when executing database actions.`;
 
 // ─── Puter AI response parser ─────────────────────────────────────────
-function parseAiDirectives(text: string, addMemory: Function, addTodo: Function) {
+function parseAiDirectives(text: string, addMemory: Function, addTodo: Function, executeTool: Function) {
   const memoryMatches = [...text.matchAll(/\[\[MEMORY:([^:]+):([^:]+):([^\]]+)\]\]/g)];
   for (const m of memoryMatches) {
     addMemory({ category: m[1], key: m[2], value: m[3] }).catch(() => {});
@@ -37,8 +35,26 @@ function parseAiDirectives(text: string, addMemory: Function, addTodo: Function)
   for (const t of todoMatches) {
     addTodo({ title: t[1], priority: t[2] as any }).catch(() => {});
   }
+  const emailMatches = [...text.matchAll(/\[\[EMAIL:([^:]+):([^:]+):([^\]]+)\]\]/g)];
+  for (const e of emailMatches) {
+    executeTool({ toolName: "send_email", params: { recipient: e[1], subject: e[2], body: e[3] } }).catch(() => {});
+  }
+  const apptMatches = [...text.matchAll(/\[\[APPOINTMENT:([^:]+):([^:]+):([^\]]+)\]\]/g)];
+  for (const a of apptMatches) {
+    executeTool({ toolName: "schedule_event", params: { patientName: a[1], phone: a[2], notes: a[3] } }).catch(() => {});
+  }
+  const triageMatches = [...text.matchAll(/\[\[TRIAGE:([^:]+):([^\]]+)\]\]/g)];
+  for (const tr of triageMatches) {
+    executeTool({ toolName: "triage_patient", params: { patientName: tr[1], symptoms: tr[2] } }).catch(() => {});
+  }
   // Return clean text without directives
-  return text.replace(/\[\[MEMORY:[^\]]+\]\]/g, "").replace(/\[\[TODO:[^\]]+\]\]/g, "").trim();
+  return text
+    .replace(/\[\[MEMORY:[^\]]+\]\]/g, "")
+    .replace(/\[\[TODO:[^\]]+\]\]/g, "")
+    .replace(/\[\[EMAIL:[^\]]+\]\]/g, "")
+    .replace(/\[\[APPOINTMENT:[^\]]+\]\]/g, "")
+    .replace(/\[\[TRIAGE:[^\]]+\]\]/g, "")
+    .trim();
 }
 
 export default function JarvisPage() {
@@ -53,6 +69,7 @@ export default function JarvisPage() {
   const setObjective = useMutation(api.jarvisObjective.set);
   const addMemory = useMutation(api.jarvisMemory.upsert);
   const addTodo = useMutation(api.jarvisTodos.add);
+  const executeTool = useMutation(api.jarvisTools.executeTool);
   const voiceStateRes = useQuery(api.jarvisVoiceState.get, {});
   const voiceState = voiceStateRes?.data;
 
@@ -154,8 +171,8 @@ export default function JarvisPage() {
         ? response
         : response?.message?.content ?? response?.text ?? "I'm sorry, I couldn't process that.";
 
-      // Parse and store directives (memory, todos)
-      const cleanText = parseAiDirectives(rawText, addMemory.mutateAsync, addTodo.mutateAsync);
+      // Parse and store directives (memory, todos, email, appt, triage)
+      const cleanText = parseAiDirectives(rawText, addMemory.mutateAsync, addTodo.mutateAsync, executeTool.mutateAsync);
 
       await addMessage.mutateAsync({ role: "assistant", text: cleanText });
       void logTimeline.mutateAsync({ kind: "response_generated", label: "Response generated", detail: cleanText.slice(0, 80) }).catch(() => {});

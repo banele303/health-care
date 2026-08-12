@@ -2,61 +2,78 @@ import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { requireUser } from "./lib";
 
-const DEFAULT_EMAILS = {
-  unread: 3,
-  lastSync: Date.now() - 5 * 60 * 1000,
-  important: [
-    { subject: "🚨 Urgent: Lab Results for Room 302", from: "Dr. Sarah Jenkins <s.jenkins@medflow.org>", priority: "high" },
-    { subject: "Shift Handover Notes — ICU Ward B", from: "Nurse Mark Stevens <m.stevens@medflow.org>", priority: "medium" },
-    { subject: "Pharmacy Supply Update: Insulin Glargine", from: "Pharmacy Dept <pharmacy@medflow.org>", priority: "normal" },
-  ],
-};
-
-const DEFAULT_CALENDAR = {
-  todayCount: 4,
-  lastSync: Date.now() - 12 * 60 * 1000,
-  nextMeeting: { title: "Patient Rounds — Cardiology Ward", start: new Date(Date.now() + 30 * 60 * 1000).toISOString() },
-  upcoming: [
-    { title: "Patient Rounds — Cardiology Ward", start: new Date(Date.now() + 30 * 60 * 1000).toISOString() },
-    { title: "Surgical Consult w/ Dr. Miller", start: new Date(Date.now() + 2 * 3600 * 1000).toISOString() },
-    { title: "Departmental Clinical Audit", start: new Date(Date.now() + 4 * 3600 * 1000).toISOString() },
-    { title: "Patient Discharge Briefing: Alex South", start: new Date(Date.now() + 6 * 3600 * 1000).toISOString() },
-  ],
-};
-
-const DEFAULT_NOTES = {
-  lastSync: Date.now() - 25 * 60 * 1000,
-  sources: ["Notion Clinical Workspace", "Hospital Knowledge Base"],
-  recent: [
-    { title: "Sepsis Protocol Guidelines 2026", url: "#" },
-    { title: "Pediatric Dosage Adjustments Checklist", url: "#" },
-    { title: "ICU Ventilator Maintenance Standard", url: "#" },
-    { title: "Patient Discharge Protocol & Pharmacy Sync", url: "#" },
-  ],
-};
-
 export const getAll = query({
   args: {},
   handler: async (ctx) => {
     const { identity, user } = await requireUser(ctx);
     const userId = (user?._id ?? identity.subject) as string;
 
-    const rows = await ctx.db
-      .query("jarvisDashboardCards")
+    // 1. Fetch real communications from crmCommunications
+    const comms = await ctx.db.query("crmCommunications").order("desc").collect();
+    const emails = comms.filter(c => c.type === "email").slice(0, 5).map(c => ({
+      subject: c.subject,
+      from: c.senderName ?? c.recipientEmail ?? "Patient / Staff",
+      body: c.body,
+      createdAt: c.createdAt,
+    }));
+
+    // 2. Fetch real CRM leads with scheduled appointments
+    const crmLeads = await ctx.db.query("crmLeads").collect();
+    const scheduledAppointments = crmLeads.filter(l => l.status === "appointment_scheduled" || l.status === "in_treatment");
+    const upcomingEvents = scheduledAppointments.slice(0, 5).map(l => ({
+      title: `${l.name} (${l.status.replace("_", " ")})`,
+      start: new Date(l.updatedAt).toISOString(),
+    }));
+
+    // 3. Fetch real lab results pending review
+    const pendingLabs = await ctx.db.query("labResults").collect();
+    const recentLabs = pendingLabs.slice(0, 4).map(l => ({
+      title: `Lab: ${l.testType} — ${l.patient}`,
+      status: l.status,
+    }));
+
+    // 4. Fetch real Jarvis memory clinical notes
+    const memories = await ctx.db
+      .query("jarvisMemory")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
 
-    const result: Record<string, { data: any; updatedAt: number }> = {
-      emails: { data: DEFAULT_EMAILS, updatedAt: Date.now() },
-      calendar: { data: DEFAULT_CALENDAR, updatedAt: Date.now() },
-      notes: { data: DEFAULT_NOTES, updatedAt: Date.now() },
+    const clinicalNotes = memories.map(m => ({
+      title: `${m.key}: ${m.value}`,
+      category: m.category,
+    })).slice(0, 5);
+
+    return {
+      emails: {
+        data: {
+          unread: emails.length,
+          lastSync: Date.now(),
+          important: emails.length > 0 ? emails : [
+            { subject: "CRM Email System Ready", from: "MedFlow AI System", body: "Send emails via AI or CRM tab" }
+          ],
+        },
+        updatedAt: Date.now(),
+      },
+      calendar: {
+        data: {
+          todayCount: scheduledAppointments.length,
+          lastSync: Date.now(),
+          nextMeeting: upcomingEvents[0] ?? { title: "No upcoming appointments scheduled", start: new Date().toISOString() },
+          upcoming: upcomingEvents.length > 0 ? upcomingEvents : recentLabs,
+        },
+        updatedAt: Date.now(),
+      },
+      notes: {
+        data: {
+          lastSync: Date.now(),
+          sources: ["Real Database Memory", "Convex Store"],
+          recent: clinicalNotes.length > 0 ? clinicalNotes : [
+            { title: "No stored notes yet — ask Jarvis to remember clinical notes" }
+          ],
+        },
+        updatedAt: Date.now(),
+      },
     };
-
-    for (const r of rows) {
-      result[r.cardKey] = { data: r.data, updatedAt: r.updatedAt };
-    }
-
-    return result;
   },
 });
 
