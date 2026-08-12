@@ -73,7 +73,7 @@ export default function JarvisPage() {
     orbStateRef.current = state;
     setOrbStateRaw(state);
     document.documentElement.style.setProperty("--jarvis-state-hue", String(ORB_STATE_HUES[state] ?? 197));
-    void setVoiceState({ orbState: state, sessionActive: active }).catch(() => {});
+    void setVoiceState.mutateAsync({ orbState: state, sessionActive: active }).catch(() => {});
   }, [active, setVoiceState]);
 
   // Animate audio level for listening
@@ -134,11 +134,11 @@ export default function JarvisPage() {
     if (isSpeaking) stopSpeaking();
 
     setOrbState("thinking");
-    void setObjective({ text: text.slice(0, 80), state: "working" }).catch(() => {});
-    void logTimeline({ kind: "user_spoke", label: "User spoke", detail: text.slice(0, 80) }).catch(() => {});
+    void setObjective.mutateAsync({ text: text.slice(0, 80), state: "working" }).catch(() => {});
+    void logTimeline.mutateAsync({ kind: "user_spoke", label: "User spoke", detail: text.slice(0, 80) }).catch(() => {});
 
     // Add user message to transcript
-    await addMessage.mutate({ role: "user", text });
+    await addMessage.mutateAsync({ role: "user", text });
 
     try {
       const puter = (window as any).puter;
@@ -153,11 +153,11 @@ export default function JarvisPage() {
         : response?.message?.content ?? response?.text ?? "I'm sorry, I couldn't process that.";
 
       // Parse and store directives (memory, todos)
-      const cleanText = parseAiDirectives(rawText, addMemory.mutate, addTodo.mutate);
+      const cleanText = parseAiDirectives(rawText, addMemory.mutateAsync, addTodo.mutateAsync);
 
-      await addMessage.mutate({ role: "assistant", text: cleanText });
-      void logTimeline({ kind: "response_generated", label: "Response generated", detail: cleanText.slice(0, 80) }).catch(() => {});
-      void setObjective({ text: "Standing by", state: "idle" }).catch(() => {});
+      await addMessage.mutateAsync({ role: "assistant", text: cleanText });
+      void logTimeline.mutateAsync({ kind: "response_generated", label: "Response generated", detail: cleanText.slice(0, 80) }).catch(() => {});
+      void setObjective.mutateAsync({ text: "Standing by", state: "idle" }).catch(() => {});
 
       // Speak the response
       speak(cleanText);
@@ -165,8 +165,8 @@ export default function JarvisPage() {
     } catch (err: any) {
       setOrbState("error");
       const errMsg = err.message || "Failed to get AI response.";
-      await addMessage.mutate({ role: "assistant", text: `Error: ${errMsg}` });
-      void logTimeline({ kind: "error", label: "Error", detail: errMsg }).catch(() => {});
+      await addMessage.mutateAsync({ role: "assistant", text: `Error: ${errMsg}` });
+      void logTimeline.mutateAsync({ kind: "error", label: "Error", detail: errMsg }).catch(() => {});
       setTimeout(() => setOrbState("idle"), 2000);
     }
   }, [isSpeaking, speak, stopSpeaking, setOrbState, addMessage, logTimeline, setObjective, addMemory, addTodo]);
@@ -215,8 +215,8 @@ export default function JarvisPage() {
 
       setActive(true);
       setOrbState("idle");
-      void setVoiceState({ orbState: "idle", sessionActive: true }).catch(() => {});
-      void logTimeline({ kind: "completed", label: "Jarvis online", detail: "Voice session started" }).catch(() => {});
+      void setVoiceState.mutateAsync({ orbState: "idle", sessionActive: true }).catch(() => {});
+      void logTimeline.mutateAsync({ kind: "completed", label: "Jarvis online", detail: "Voice session started" }).catch(() => {});
       toast.success("🤖 Jarvis is online — speak now!");
 
     } catch (err: any) {
@@ -234,8 +234,8 @@ export default function JarvisPage() {
     setListening(false);
     setIsSpeaking(false);
     setOrbState("idle");
-    void setVoiceState({ orbState: "idle", sessionActive: false }).catch(() => {});
-    void logTimeline({ kind: "speech_interrupted", label: "Jarvis offline", detail: "Session ended" }).catch(() => {});
+    void setVoiceState.mutateAsync({ orbState: "idle", sessionActive: false }).catch(() => {});
+    void logTimeline.mutateAsync({ kind: "speech_interrupted", label: "Jarvis offline", detail: "Session ended" }).catch(() => {});
   }, [setOrbState, setVoiceState, logTimeline]);
 
   const handleTextSend = useCallback(async () => {
@@ -246,15 +246,15 @@ export default function JarvisPage() {
   }, [textInput, handleUserInput]);
 
   const handleClear = async () => {
-    await clearMessages.mutate({});
-    void logTimeline({ kind: "completed", label: "Conversation cleared" }).catch(() => {});
+    await clearMessages.mutateAsync({});
+    void logTimeline.mutateAsync({ kind: "completed", label: "Conversation cleared" }).catch(() => {});
     toast.success("Conversation cleared");
   };
 
   // Mirror tab sync
-  const heartbeatFresh = !!voiceState?.sessionActive && Date.now() - (voiceState?.updatedAt ?? 0) < 25000;
+  const heartbeatFresh = !!voiceState?.data?.sessionActive && Date.now() - (voiceState?.data?.updatedAt ?? 0) < 25000;
   const mirroring = !active && heartbeatFresh;
-  const displayState: OrbState = active ? orbState : mirroring ? (voiceState?.orbState as OrbState ?? "idle") : "idle";
+  const displayState: OrbState = active ? orbState : mirroring ? (voiceState?.data?.orbState as OrbState ?? "idle") : "idle";
 
   return (
     <div className="jarvis-root relative flex h-[calc(100vh-7rem)] overflow-hidden rounded-2xl border border-white/10 shadow-2xl">

@@ -277,16 +277,16 @@ export default function MessagingPage() {
   // Seed default channels and set online presence on mount
   useEffect(() => {
     if (!userId) return;
-    seedChannels.mutate({ userId }).catch(() => {});
-    setPresence.mutate({ userId, status: "online" }).catch(() => {});
+    seedChannels.mutateAsync({ userId }).catch(() => {});
+    setPresence.mutateAsync({ userId, status: "online" }).catch(() => {});
 
     const interval = setInterval(() => {
-      setPresence.mutate({ userId, status: "online" }).catch(() => {});
+      setPresence.mutateAsync({ userId, status: "online" }).catch(() => {});
     }, 30000);
 
     return () => {
       clearInterval(interval);
-      setPresence.mutate({ userId, status: "offline" }).catch(() => {});
+      setPresence.mutateAsync({ userId, status: "offline" }).catch(() => {});
     };
   }, [userId]);
 
@@ -321,7 +321,7 @@ export default function MessagingPage() {
     setInput("");
 
     try {
-      await sendMsg.mutate({
+      await sendMsg.mutateAsync({
         channelId: activeChannelId,
         content,
         senderName: userName,
@@ -341,7 +341,7 @@ export default function MessagingPage() {
             const sysPrompt = `You are MedFlow AI, an expert hospital assistant. You help doctors, nurses, and staff with clinical questions, medication queries, procedures, and administrative tasks. Be concise, professional, and helpful. Use medical terminology where appropriate but remain accessible.`;
             const response = await puter.ai.chat(`${sysPrompt}\n\nUser (${userRole}): ${content}`, { model: "gpt-4o-mini" });
             const aiText = typeof response === "string" ? response : response?.message?.content ?? response?.text ?? "I'm sorry, I couldn't process that request.";
-            await sendMsg.mutate({
+            await sendMsg.mutateAsync({
               channelId: activeChannelId,
               content: aiText,
               senderName: "MedFlow AI",
@@ -362,13 +362,13 @@ export default function MessagingPage() {
 
   const handleReact = async (msgId: string, emoji: string) => {
     try {
-      await reactMut.mutate({ messageId: msgId as any, emoji, userId });
+      await reactMut.mutateAsync({ messageId: msgId as any, emoji, userId });
     } catch { /* silent */ }
   };
 
   const handleDelete = async (msgId: string) => {
     try {
-      await deleteMut.mutate({ messageId: msgId as any, userId });
+      await deleteMut.mutateAsync({ messageId: msgId as any, userId });
     } catch (err: any) {
       toast.error(err.message);
     }
